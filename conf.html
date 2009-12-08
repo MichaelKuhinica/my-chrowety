@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link type="text/css" rel="stylesheet" href="css/base.css" />
+<link type="text/css" rel="stylesheet" href="css/config.css" />
+<script type="text/javascript" src="js/db.js"></script>
+<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript">
+/*<![CDATA[*/
+var Controller = function(){return chrome.extension.getBackgroundPage()};
+function Traduz(s){
+  return Controller().Traduz(s);
+}
+function J2S(obj){
+    return JSON.stringify(obj);
+}
+function S2J(str){
+    return JSON.parse(str);
+}
+var config;
+
+function getByValue(selectId, value){
+    var ops = $('#'+selectId)[0].options;
+    for(i=0;i<ops.length;i++){
+      if(ops[i].value == value){
+        return i;
+      }
+    }
+
+}
+function SelectOption(selectId, value){
+    $('#'+selectId)[0].options[getByValue(selectId, value)].selected = 'selected';
+}
+function GetValue(selectId){
+    return $('#'+selectId).val();
+}
+
+function Reset(){
+    db.deleta('config');
+    Controller().LoadConfig();
+    location.reload();
+}
+
+function LoadConfig(){
+    if(!db.pega('config')){
+        config = Controller().DefaultConfig;
+    }else{
+        config = S2J(db.pega('config'));
+    }
+    SelectOption('language', config.language);
+    SelectOption('home_tweets_page', config.start_count.home);
+    SelectOption('home_refresh_time', config.refresh.home);
+}
+
+function SaveConfig(){
+    config.language         = GetValue('language');
+    config.start_count.home = GetValue('home_tweets_page');
+    config.refresh.home     = GetValue('home_refresh_time');
+
+    config = J2S(config);
+    db.salva('config', config);
+    Controller().ReLoadConfig();
+    location.reload();
+}
+function init(){
+    LoadConfig();
+}
+$(document).ready(init);
+/*]]>*/
+</script>
+</head>
+<body>
+<div id="init" class="config">
+    <div class="tit p16 oceania">
+      <span class="titulo fl p16 oceania">
+          <img src="icones/x32.png" class="icon"/>Chrowety
+      </span>
+      <span class="fl p16 oceania"><script>document.write(Traduz('configuration'))</script></span>
+      <br />
+    </div>
+    <div class="con">
+        <fieldset class="section">
+            <legend class="oceania"><script>document.write(Traduz('main'))</script></legend>
+            <span class="stit"><script>document.write(Traduz('home'))</script>:</span>
+            <label><script>document.write(Traduz('tweets_per_page'))</script>
+              <select id="home_tweets_page">
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+                    
+            <label><script>document.write(Traduz('refresh_time'))</script>
+              <select id="home_refresh_time">
+                <option value="3">3 <script>document.write(Traduz('minutes'))</script></option>
+                <option value="4">4 <script>document.write(Traduz('minutes'))</script></option>
+                <option value="5">5 <script>document.write(Traduz('minutes'))</script></option>
+                <option value="7">7 <script>document.write(Traduz('minutes'))</script></option>
+                <option value="10">10 <script>document.write(Traduz('minutes'))</script></option>
+              </select>
+            </label>
+
+<!--
+            <br /><br />
+            <span class="stit"><script>document.write(Traduz('mentions'))</script>:</span>
+            <label>Tweets per page
+              <select id="home_tweets_page">
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+                    
+            <label>Refresh time
+              <select id="home_refresh_time">
+                <option value="5">5 Minutes</option>
+                <option value="7">7 Minutes</option>
+                <option value="10">10 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="20">20 Minutes</option>
+              </select>
+            </label>
+
+
+            <br /><br />
+            <span class="stit"><script>document.write(Traduz('messages'))</script>:</span>
+            <label>Tweets per page
+              <select id="home_tweets_page">
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+                    
+            <label>Refresh time
+              <select id="home_refresh_time">
+                <option value="5">5 Minutes</option>
+                <option value="7">7 Minutes</option>
+                <option value="10">10 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="20">20 Minutes</option>
+              </select>
+            </label>
+
+
+            <br /><br />
+            <span class="stit"><script>document.write(Traduz('favorites'))</script>:</span>
+            <label>Tweets per page
+              <select id="home_tweets_page">
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+                    
+            <label>Refresh time
+              <select id="home_refresh_time">
+                <option value="5">5 Minutes</option>
+                <option value="7">7 Minutes</option>
+                <option value="10">10 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="20">20 Minutes</option>
+              </select>
+            </label>
+
+            <label>Show Retweets
+                <input type="checkbox"/>
+            </label>
+            <br />
+            <label>Show Retweets
+                <input type="radio"/>
+            </label>
+-->
+        </fieldset>
+
+
+        <fieldset class="section">
+            <legend class="oceania"><script>document.write(Traduz('other'))</script></legend>
+
+            <label><script>document.write(Traduz('language'))</script>
+              <select id="language">
+                <option value="en">English</option>
+                <option value="pt-br">Português (Brasil)</option>
+              </select>
+            </label> (<script>document.write(Traduz('restart_required'))</script>)
+            <br /><br />
+            <p><script>document.write(Traduz('twitter_limits_api'))</script></p>
+            <br />
+            <label><script>document.write(Traduz('remaining_requests'))</script>: <span id="api_limit"><script>document.write(db.pega('api_limit'))</script></span></label>
+            <br /><br />
+            <label><script>document.write(Traduz('reset_time'))</script>: <span id="api_time"><script>document.write(Controller().ApiDate(db.pega('api_reset_time')))</script></span></label>
+            <br /><br />
+            <span class="p8">*<script>document.write(Traduz('how_to_restart'))</script></span>
+        </fieldset>
+
+        <br /><br />
+        <button class="oceania" onclick="SaveConfig()"><script>document.write(Traduz('save'))</script></button>
+        <br /><br />
+        <a title="" class="p8" onclick="Reset()"><script>document.write(Traduz('reset'))</script></a>
+    </div>
+</div>
+</body>
+</html>
+
