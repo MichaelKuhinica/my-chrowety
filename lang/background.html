@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="">
+<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/db.js"></script>
+<script type="text/javascript" src="" id="language" charset="iso-8859-1"></script>
+<script type="text/javascript">
+var Popup = function(){return chrome.experimental.extension.getPopupView();}
+var m = function(i){return i+'0000'}
+var api = {
+    login:'https://twitter.com/account/verify_credentials.json',
+    logout:'https://twitter.com/account/end_session.json',
+    rate:'https://twitter.com/account/rate_limit_status.json',
+    home:'https://twitter.com/statuses/home_timeline.json',
+    friends:'https://twitter.com/statuses/friends_timeline.json',
+    mentions:'https://twitter.com/statuses/mentions.json',
+    messages:'https://twitter.com/direct_messages.json',
+    favorites:'https://twitter.com/favorites.json',
+    update:'https://twitter.com/statuses/update.json',
+    updateDM:'https://twitter.com/direct_messages/new.json',
+    user_show:'https://twitter.com/users/show.json',
+    retweet:function(id){return 'https://twitter.com/statuses/retweet/'+id+'.json'},
+    destroy:function(id){return 'https://twitter.com/statuses/destroy/'+id+'.json'},
+    favorite:function(id){return 'https://twitter.com/favorites/create/'+id+'.json'},
+    unfavorite:function(id){return 'https://twitter.com/favorites/destroy/'+id+'.json'},
+
+    threely:'http://3.ly/',
+    twitpic:'http://twitpic.com/show/',
+    tweetphoto_view:'http://TweetPhotoAPI.com/api/TPAPI.svc/imagefromurl',
+    tweetphoto_post:'http://tweetphotoapi.com/api/tpapi.svc/upload2',
+    migre_short:'http://migre.me/api.xml',
+    migre_long:'http://migre.me/api_redirect2.xml',
+    bitly_key:'R_97c454d9f47bad7c916ae97742d66b8b',
+    bitly_short:'http://api.bit.ly/shorten',
+    jmp_short:'http://api.j.mp/shorten',
+    isgd:'http://is.gd/api.php',
+    trim:'http://api.tr.im/v1/trim_simple',
+    untrim:'http://untr.im/api/ajax/api',
+};
+var time = {
+    profile:null,
+    home:null,
+    mentions:null,
+    limit:null,
+    home2:null,
+    home3:null
+};
+
+var Logado=false,_iniciou,toush,total=0,new_count=0,new_tcount=0,OldCount=0,api_limit = null,api_checked=false,aid,oid,taid;
+
+function Request(url, met, type, ctype){
+    this.url = url;
+    this.met = met;
+    this.type = type ? type : "json";
+    this.dados = null;
+    this.sucesso = null;
+    this.erro = null;
+    this.contentType = ctype ? ctype : "application/x-www-form-urlencoded",
+    this.init = function(){
+      $.ajax({
+            url: this.url,
+            type: this.met,
+            data: this.dados,
+            dataType: this.type,
+            contentType: this.contentType,
+            success: this.sucesso,
+            error: this.erro,
+         }
+      );
+    }
+}
+
+function SinceDate(TD){
+    var a = new Date(TD);
+    return a.getDate()+'/'+(a.getMonth()+1)+'/'+a.getFullYear();
+}
+
+function ApiDate(TD){
+    var a = new Date(TD);
+    return a.getHours()+':'+a.getMinutes()+':'+a.getSeconds();
+}
+
+function TweetData(TD) {
+  var TD = Date.parse(TD);
+  var Calc = (new Date().getTime() - TD) / 1000;
+  if(Calc < 15) {
+          return Traduz('just_now');
+  } else if(Calc < 60) {
+          return Traduz('less_than_a_minute_ago');
+  } else if(Calc < 60 * 60) {
+          var Min = parseInt(Calc / 60);
+          var s = Traduz('minute_ago').replace('%s', Min);
+              s = s.replace('&', ((Min > 1) ? "s" : ""));
+          return s;
+  } else if(Calc < 60 * 60 * 24) {
+          var Hor = parseInt(Calc / (60 * 60));
+          var s = Traduz('about_hour_ago').replace('%s', Hor);
+              s = s.replace('&', ((Hor > 1) ? "s" : ""));
+          return s;
+  } else if(Calc < 60 * 60 * 24 * 30) {
+          var Day = parseInt(Calc / (60 * 60 * 24));
+          var s = Traduz('about_day_ago').replace('%s', Day);
+              s = s.replace('&', ((Day > 1) ? "s" : ""));
+          return s;
+  } else if(Calc < 60 * 60 * 24 * 30 * 12) {
+          var Month = parseInt(Calc / (60 * 60 * 24 * 30));
+          var s = Traduz('about_month_ago').replace('%s', Month);
+              s = s.replace('&', ((Month > 1) ? "es" : ""));
+          return s;
+  } else {
+          return Traduz('years_ago');
+  }
+}
+
+var tws = {
+    home:{
+      total:0,
+      last:0,
+      new_count:0,
+      tweets:[],
+      tw:[],
+    },
+    mentions:{
+      total:0,
+      last:0,
+      new_count:0,
+      tweets:[],
+      tw:[],
+    },
+    messages:{
+      total:0,
+      last:0,
+      new_count:0,
+      tweets:[],
+      tw:[],
+    },
+    favorites:{
+      total:0,
+      last:0,
+      new_count:0,
+      tweets:[],
+      tw:[],
+    },
+};
+
+function LoadLang(){
+    var lg = config.language;
+    $('#language').attr('src', 'lang/'+lg+'.js');
+}
+
+function Traduz(s, e){
+  return language[language.id][s]+(e?e:'');
+}
+
+function LoadConfig(){
+    console.log('LoadConfig()');
+
+    if(!db.pega('version')){
+        db.deleta('config');
+        db.salva('version', Chrowety.version());
+    }
+    else if(db.pega('version') != Chrowety.version()){
+        //db.limpa();
+        //db.deleta('lembra');
+        //db.deleta('z_z');
+        db.deleta('config');
+        db.salva('version', Chrowety.version());
+    }
+
+    if(db.pega('config') && db.pega('config') != null && typeof S2J(db.pega('config')) == "object"){
+        console.log('LoadConfig() > Definida');
+        config = S2J(db.pega('config'));
+        console.log(config);
+    }else{
+        //var a = J2S(DefaultConfig);
+        //config = S2J(a);
+        console.log('LoadConfig() > Padr„o');
+        config = DefaultConfig;
+    }
+
+    LoadLang();
+}
+
+function ReLoadConfig(){
+    //Chrowety.logout(true);
+    var _NAME_ = new Array('home', 'mentions', 'messages');
+    for(n in  _NAME_){
+      try{
+        window.clearInterval(time[_NAME_[n]]);
+      }catch(e){console.log(e)}
+    }
+    LoadConfig();
+    for(n in  _NAME_){
+      try{
+        console.log('ReLoadConfig() > '+_NAME_[n]);
+        time[_NAME_[n]] = setInterval('Chrowety.'+_NAME_[n]+'.Since()', m(config.refresh[_NAME_[n]]));
+      }catch(e){console.log(e)}
+    }
+    //window.clearInterval(time.home);
+    //time.home = setInterval('Chrowety.home.Since()', m(config.refresh.home));
+    //init();
+}
+
+var config = {};
+var DefaultConfig = {
+    language: 'en',
+    url_shortener: '3.ly',
+    tweet_font_size: '10pt',
+    tweet_shadow: "false",
+    twitter_question: false,
+    start_count:{
+      home:10,
+      mentions:10,
+      messages:20,
+      favorites:20,
+    },
+    old_count:{
+      home:10,
+      mentions:10,
+      messages:10,
+      favorites:20,
+    },
+    refresh:{
+      home:5,
+      mentions:8,
+      messages:10,
+      favorites:60,
+      limit_check:3,
+      profile:20,
+    }
+};
+
+function J2S(obj){
+    return JSON.stringify(obj);
+}
+
+function S2J(str){
+    return JSON.parse(str);
+}
+
+
+function Sortear(ob, campo, reverso){
+    var ob2 = ob;
+    var SortFunc = function(field, reverse, primer){
+
+       reverse = (reverse) ? -1 : 1;
+
+       return function(a,b){
+
+           a = a[field];
+           b = b[field];
+
+           if (typeof(primer) != 'undefined'){
+               a = primer(a);
+               b = primer(b);
+           }
+
+           if (a<b) return reverse * -1;
+           if (a>b) return reverse * 1;
+           return 0;
+
+       }
+    };
+
+    return ob2.sort(SortFunc(campo, reverso, parseInt));
+}
+
+
+
+
+function CacheTweets(){
+    var user     = db.pega('user');
+
+    var _tws     = J2S(tws);
+
+    db.salva(user+'_TwCache', true);
+    db.salva(user+'_tws', _tws);
+}
+
+function CalculaApiRequests(){
+    var a = config.refresh;
+    var calc = (60/a.home) + (60/a.mentions) + (60/a.messages) + (60/a.favorites);
+    calc = ((calc) + 4).toFixed();
+    /*
+    var a = config.refresh;
+    var calc = (60/a.home) + (60/a.mentions) + (60/a.messages) + (60/a.favorites);
+    calc = ((calc * 100) + 4).toFixed();
+    */
+    perc = ((calc / 150) * 100).toFixed();
+    return {numero: calc, porcento: perc};
+}
+
+function RateLimit(func){
+  $.get(api.rate, null, function(json){
+    api_limit = json.remaining_hits;
+    db.salva('api_limit', json.remaining_hits);
+    db.salva('api_reset_time', json.reset_time);
+    if(api_limit > 0){
+        api_checked = true;
+        console.log('RateLimit() > OK > '+api_limit+' | '+ ApiDate(db.pega('api_reset_time')));
+        if(func){
+          try{eval(func)}catch(e){}
+        }
+    }else{
+        console.log('RateLimit() > Limit Exceeded');
+        try{
+          Popup().RefreshLimit(new_count);
+        }catch(e){}
+    }
+  }, "json");
+}
+
+function CheckLimit(r){
+    RateLimit(r);
+}
+
+function ClearUnreads(tm){
+    console.log('Cleaning Unreads > '+tm);
+    tws[tm].new_count = 0;
+    chrome.browserAction.setBadgeText({text:''});
+    for(id in tws[tm].tweets){
+        tws[tm].tweets[id].read = true;
+    }
+}
+
+function SalvaProfile(json){
+  db.salva('id', json.id);
+  db.salva('user', json.screen_name);
+  db.salva('nome', json.name);
+  db.salva('foto', json.profile_image_url);
+  db.salva('info', json.description);
+  db.salva('local', json.location);
+  db.salva('seguidores', json.followers_count);
+  db.salva('seguindo', json.friends_count);
+  db.salva('favoritos', json.favourites_count);
+}
+
+// ******
+/*
+function ShowMore(tm){
+  Chrowety[tm].Max();
+}
+*/
+
+function ContaTweets(tm){
+    var i=0;
+    var id=null,fid=null,fit=null;
+    var tw = Sortear(tws[tm].tweets, 'id', false);
+    for(a in tw){
+      i++;
+      id = tw[a].id;
+      if(i == 1){Chrowety[tm].primeiro_lista = id;fid=id}
+      Chrowety[tm].ultimo = id;
+    }
+    //Chrowety.home.primeiro = id;
+    //console.log('ContaTweet() '+tm+': '+i+' LastID: '+id+' FirstID: '+fid+' First_In: '+Chrowety[tm].primeiro_lista);
+    tws[tm].total = i;
+}
+
+var fec = {
+    ByTid:function(tm, tid, del){
+        var a = tws[tm].tweets;
+        for(i in a){
+            if(a[i].id == tid){
+                if(del){
+                  delete tws[tm].tweets[i];
+                }
+                //console.log('Deletado: '+tid);
+                return a[i];
+                break;
+            }else if(a[i].retweeted_status && a[i].retweeted_status.id == tid){
+                if(del){
+                  delete tws[tm].tweets[i];
+                  console.log('Tweet Deleted: '+tid);
+                }
+                //console.log('Deletado: '+tid);
+                return a[i];
+                break;
+            }
+        }
+    },
+    refresh:function(tm){
+        var ob = tws[tm].tweets;
+        for(id in ob){
+            ob[id].html = Layout(ob[id], tm);
+        }
+    },
+
+    ref:function(i, tm){
+        var ob = tws[tm].tweets[i];
+            if(tm == 'messages'){
+                ob.html = LayoutMessage(ob, tm);
+            }else{
+                ob.html = Layout(ob, tm);
+            }
+        return ob.html;
+    },
+
+    html:function(tm, cf){
+        var i = 0;
+        var re='';
+        var ob = Sortear(tws[tm].tweets, 'id', true);
+        //var total = Chrowety[tm].mostrando ? Chrowety[tm].mostrando : config.start_count[tm];
+        var total = config.start_count[tm];
+        var ia = 0;
+        for(id in ob){
+          if(cf && cf.max){
+            //console.log('fec.html() > max: '+cf.max+ ' e: '+ob[id].id);
+            if(i > total)break;
+            if(ob[id].id == ia)continue;
+            if(ob[id].id < cf.max){
+              re = re+fec.ref(id, tm);
+              ia = ob[id].id;
+              Chrowety[tm].primeiro_lista = Chrowety[tm].primeiro =  ia;
+              i++;
+            }
+          }
+          else if(cf && cf.since){
+            //console.log('fec.html() > since: '+cf.since+ ' e: '+ob[id].id);
+            if(i > total)break;
+            if(ob[id].id == ia)continue;
+            if(ob[id].id > cf.since){
+              re = re+fec.ref(id, tm);
+              ia = ob[id].id;
+              Chrowety[tm].primeiro_lista = Chrowety[tm].primeiro =  ia;
+              i++;
+            }
+          }else{
+            if(i > total)break;
+            if(ob[id].id == ia)continue;
+            re = re+fec.ref(id, tm);
+            ia = ob[id].id;
+            Chrowety[tm].primeiro_lista = Chrowety[tm].primeiro =  ia;
+            i++;
+          }
+
+        }
+        Chrowety[tm].mostrando += i;
+        //ContaTweets(tm);
+        return re;
+    }
+}
+
+/* CHROWETY CONTROLLER */
+var Chrowety = {
+
+    profile_last_view: null, // nome do usuario sendo visualizado
+
+    version:function(){
+          var version = 'NaN';
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', chrome.extension.getURL('manifest.json'), false);
+          xhr.onreadystatechange = function() {
+            if (this.readyState == 4) {
+              var manifest = JSON.parse(this.responseText);
+              version = manifest.version;
+            }
+          };
+          xhr.send();
+          return version;
+    },
+
+    // @lembra
+    // @login
+    login:function(lembra, login){
+      console.log('Chrowety.login()');
+      var Login = new Request(api.login, 'get');
+          Login.sucesso = function(json){
+              db.salva('z_z', login);
+              CheckLimit('Chrowety.Run()');
+              console.log('Logado...');
+              Logado = true;
+
+              db.salva('profile_view', J2S({}));
+              db.salva('lembra', lembra);
+              db.salva('modo_retweet', 'normal');
+              db.salva('version', Chrowety.version());
+
+              SalvaProfile(json);
+              Popup().LoginStatus(Traduz('sucess_login'));
+              Popup().init();
+              console.log('Chrowety.login() > OK');
+          };
+          Login.erro = function(){
+              Popup().LoginStatus(Traduz('login_failed', '...'));
+              console.log('Chrowety.login() > FAIL');
+          }
+          Login.init();
+    },
+
+    logout:function(lembra){
+      Chrowety.Clean();
+      chrome.browserAction.setBadgeText({text:''});
+      console.log('Chrowety.logout()');
+      var bak_conf = db.pega('config');
+      var bak_users = db.pega('profile_view');
+      console.log('backup config');
+      console.log(bak_conf);
+      db.limpa();
+      window.clearInterval(time.limit);
+      window.clearInterval(time.home);
+      window.clearInterval(time.metions);
+      window.clearInterval(time.messages);
+      window.clearInterval(time.favorites);
+      if(bak_conf != null){db.salva('config', bak_conf)}
+      db.salva('profile_view', bak_users);
+      Logado = false;
+      jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+db.pega('z_z'))}});
+      var Logout = new Request(api.logout, 'post');
+          Logout.sucesso = function(){
+            console.log('Chrowety.logout() > OK');
+          };
+          Logout.erro = function(){
+                console.log('Chrowety.logout() > FAIL');
+          };
+          Logout.init();
+    },
+
+    // Atualiza informaÁıes do perfil
+    profile:function(){
+      console.log('Chrowety.profile()');
+      var Profile = new Request(api.login, 'get');
+          Profile.sucesso = function(json){
+            console.log('Chrowety.profile() > OK');
+            SalvaProfile(json);
+          };
+          Profile.erro = function(){
+            console.log('Chrowety.profile() > FAIL');
+          };
+          Profile.init();
+    },
+
+    user:function(uname){
+      var U = S2J(db.pega('profile_view'));
+      if(U && U[uname]){
+        console.log('Cache do Usuario encontrado');
+        Popup().ShowUserOK(U[uname]);
+        return false;
+      }
+
+      console.log('Usuario sem Cache');
+
+      var User = new Request(api.user_show, 'get');
+          User.dados = {screen_name: uname};
+          User.sucesso = function(json){
+            console.log('Chrowety.user() > OK');
+            var U = S2J(db.pega('profile_view'));
+            U[uname] = json;
+            db.salva('profile_view', J2S(U));
+            Popup().ShowUserOK(json);
+          };
+          User.erro = function(){
+            console.log('Chrowety.user() > FAIL');
+            Popup().ShowUserERRO();
+          };
+          User.init();
+    },
+
+    /*
+     * @s String - texto do tweet
+     * @reply_id Number - id do tweet de resposta
+     * @tm String - Timeline do tweet
+     */
+    update:function(s, reply_tid, tm){
+      var src = 'chrowety';//'blu';//'friendfeed';//'twidroid';//'tweetdeck';//'seesmicdesktop';//
+      var Up = new Request(api.update, 'post');
+          Up.dados = reply_tid ? {status: s, source: src, in_reply_to_status_id: reply_tid} : {status: s, source: src};
+          Up.sucesso = function(w){
+            console.log('Tweet send: '+s);
+            ht = Layout(w, tm);
+            tws.home.total++;
+            tws.home.tweets[tws.home.total] = w;
+            tws.home.tweets[tws.home.total].html = ht;
+            //> Salva o perfil
+            var U = S2J(db.pega('profile_view'));
+            var ts = J2S(w.user);
+                ts = S2J(ts); // POG pra tirar relacionamento
+                ts.status = J2S(w);
+                ts.status = S2J(ts.status);
+                delete ts.status.user;
+            U[ts.screen_name] = ts;
+            db.salva('profile_view', J2S(U));
+            Chrowety.home.ultimo = w.id;
+           //ContaTweets(tm);
+                if(reply_tid){
+                    Popup().ReplyOK(reply_tid, tm);
+                    console.log('Return ReplyOK');
+                }else{
+                    Popup().UpdateOK(ht, tm);
+                    console.log('Return UpdateOK');
+                }
+          };
+          Up.erro = function(){
+                console.log('Chrowety.update() > FAIL');
+          };
+          Up.init();
+    },
+
+    updateDM:function(s, user, tid){
+      var _NAME_ = 'messages';
+      var Up = new Request(api.updateDM, 'post');
+          Up.dados = {screen_name: user, text: s};
+          Up.sucesso = function(w){
+            console.log('Message send: '+s);
+/*
+            ht = LayoutMessage(w, _NAME_);
+            tws[_NAME_].total++;
+            tws[_NAME_].tweets[tws[_NAME_].total] = w;
+            tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+            Chrowety[_NAME_].ultimo = w.id;
+*/
+            Popup().ReplyDMOK(tid, _NAME_);
+            console.log('Chrowety.updateDM() > OK');
+          };
+          Up.erro = function(){
+                console.log('Chrowety.updateDM() > FAIL');
+          };
+          Up.init();
+    },
+
+
+    deleta:function(tid, time){
+      var del = new Request(api.destroy(tid), 'post');
+          del.sucesso = function(){
+            //delete tws.home.tweets[tid];
+            fec.ByTid(time, tid, true);
+            console.log('Chrowety.deleta() > OK');
+          };
+          del.erro = function(){
+                console.log('Chrowety.deleta() > FAIL');
+          };
+          del.init();
+    },
+
+    retweet:function(tid, time){
+      var rt = new Request(api.retweet(tid), 'post');
+          rt.sucesso = function(){
+            console.log('Retweet send: '+tid);
+            Popup().RetweetOK(tid, time);
+          };
+          rt.erro = function(){
+                console.log('Chrowety.retweet() > FAIL');
+          };
+          rt.init();
+    },
+
+    fav_active:false,
+    favorite:function(tid, time){
+      Chrowety.fav_active = true;
+      var fav = new Request(api.favorite(tid), 'post');
+          fav.sucesso = function(){
+            console.log('Favoriting tweet: '+tid);
+            fec.ByTid(time, tid).favorited = true;
+            try{
+              tws['favorites'].total++;
+              tws['favorites'].tweets[tws['favorites'].total] = fec.ByTid(time, tid);;
+            }catch(e){}
+            Popup().FavOK(tid, true, time);
+            Chrowety.fav_active = false;
+          };
+          fav.erro = function(){
+                console.log('Chrowety.favorite() > FAIL');
+          };
+          fav.init();
+    },
+
+    unfav_active:false,
+    unfavorite:function(tid, time){
+      Chrowety.unfav_active = true;
+      var fav = new Request(api.unfavorite(tid), 'post');
+          fav.sucesso = function(){
+            console.log('Unfavoriting tweet: '+tid);
+            fec.ByTid(time, tid).favorited = false;
+            try{
+                fec.ByTid('favorites', tid, true);
+            }catch(e){}
+            Popup().FavOK(tid, false, time);
+            Chrowety.unfav_active = false;
+          };
+          fav.erro = function(){
+                console.log('Chrowety.unfavorite() > FAIL');
+          };
+          fav.init();
+    },
+
+    Clean:function(){
+        var _NAME_ = new Array('home', 'mentions', 'messages', 'favorites');
+        for(n in  _NAME_){
+          try{
+            console.log('Chrowety.Clean() > '+_NAME_[n]);
+            Chrowety[_NAME_[n]]._loaded = false;
+            Chrowety[_NAME_[n]].ultimo = null;
+            Chrowety[_NAME_[n]].primeiro = null;
+            Chrowety[_NAME_[n]].primeiro_lista = null;
+            Chrowety[_NAME_[n]].scroll = 0;
+            Chrowety[_NAME_[n]].pagina = null;
+          }catch(e){console.log(e)}
+        }
+        db.deleta('AbaAtiva');
+        tws = null;
+        tws = {home:{total:0,last:0,new_count:0,tweets:[]},mentions:{total:0,last:0,new_count:0,tweets:[]},messages:{total:0,last:0,new_count:0,tweets:[]},favorites:{total:0,last:0,new_count:0,tweets:[]}};
+    },
+
+
+    Run:function(){
+        console.log('Chrowety.Run()');
+        var guia = db.pega('AbaAtiva');
+        Chrowety.home.Run();
+        Chrowety.mentions.Run();
+        Chrowety.messages.Run();
+        Chrowety.favorites.Run('LT.Auto()');
+        time.profile = window.setInterval('Chrowety.profile()', m(config.refresh.profile));
+        time.limit = window.setInterval('CheckLimit()', m(config.refresh.limit_check));
+    },
+
+    home: {
+        NAME: 'home',
+        _loaded:false,
+        scroll:0,
+        mostrando:0,
+        ultimo:null,
+        primeiro:null,
+        primeiro_lista:null,
+
+        Notify:function(n){
+            var _NAME_ = 'home';
+            tws[_NAME_].new_count += n;
+            if(tws[_NAME_].new_count > 0){
+                var c = tws[_NAME_].new_count;
+                chrome.browserAction.setBadgeText({text:''+c});
+                try{
+                  Popup().RefreshResult(c, _NAME_);
+                }catch(e){}
+                console.log('Chrowety.'+_NAME_+'.Notify(): '+c);
+                //ContaTweets(_NAME_);
+            }
+        },
+
+        Run:function(callback){ // Rate Limited
+            var _NAME_ = 'home';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Run()');
+            var Run = new Request(api[_NAME_], 'get');
+                Run.dados = {count:config.start_count[_NAME_]};
+                Run.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = true;
+                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                var U = S2J(db.pega('profile_view'));
+                                var ts = J2S(w.user);
+                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                U[ts.screen_name] = ts;
+                                db.salva('profile_view', J2S(U));
+                                if(n == 0){Chrowety[_NAME_].primeiro_lista = taid}
+                              });
+                              Chrowety[_NAME_]._loaded = true;
+                              Chrowety[_NAME_].ultimo = taid;
+                              //ContaTweets(_NAME_);
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                              if(callback){
+                                try{eval('Popup().'+callback)}catch(e){}
+                              }
+                };
+                Run.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
+                };
+                Run.init();
+        },
+        Since:function(since){ // Rate Limited
+            var _NAME_ = 'home';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Since()');
+            ContaTweets(_NAME_);
+            var last = since ? since : Chrowety[_NAME_].ultimo;
+            var novs = 0;
+            var Since = new Request(api[_NAME_], 'get');
+                Since.dados = {since_id: last};
+                Since.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                n++;
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = false;
+                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //> Salva o perfil
+                                var U = S2J(db.pega('profile_view'));
+                                var ts = J2S(w.user);
+                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                U[ts.screen_name] = ts;
+                                db.salva('profile_view', J2S(U));
+                                novs = n;
+                              });
+                              console.log('Since++ '+novs);
+                              Chrowety[_NAME_].ultimo = taid;
+                              console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
+                              Chrowety[_NAME_].Notify(novs);
+                };
+                Since.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                };
+                Since.init();
+        },
+        Max:function(max){ // Rate Limited
+            var _NAME_ = 'home';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Max()');
+            ContaTweets(_NAME_);
+            var first = max ? max : Chrowety[_NAME_].primeiro;
+            var re = '';
+            re = fec.html(_NAME_, {max:first});
+            if(!re){
+            var Max = new Request(api[_NAME_], 'get');
+                Max.dados = {count: config.old_count[_NAME_], max_id: first};
+                Max.sucesso = function(json,s){
+                              var id;
+                              $.each(json,function(n,w){
+                                if(n == 0){return;}
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                oid = id;
+                                ht = Layout(w, _NAME_, 'read');
+                                re = re+ht;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                var U = S2J(db.pega('profile_view'));
+                                var ts = J2S(w.user);
+                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                U[ts.screen_name] = ts;
+                                db.salva('profile_view', J2S(U));
+                              });
+                              Chrowety[_NAME_].primeiro = taid;
+                              Popup().ShowMoreOK(re, _NAME_);
+                              //eval('Popup().'+callback);
+                              console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Online');
+                };
+                Max.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
+                };
+                Max.init();
+            }else{
+                console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Cache');
+                Popup().ShowMoreOK(re, _NAME_);
+            }
+        },
+    },
+
+
+    mentions: {
+        NAME: 'mentions',
+        _loaded:false,
+        scroll:0,
+        mostrando:0,
+        ultimo:null,
+        primeiro:null,
+        primeiro_lista:null,
+
+        Notify:function(n){
+            var _NAME_ = 'mentions';
+            tws[_NAME_].new_count += n;
+            if(tws[_NAME_].new_count > 0){
+                var c = tws[_NAME_].new_count;
+                var d = tws[_NAME_].new_count+c;
+                chrome.browserAction.setBadgeText({text:''+c});
+                try{
+                  Popup().RefreshResult(d, _NAME_);
+                }catch(e){}
+                console.log('Chrowety.'+_NAME_+'.Notify(): '+d);
+                //ContaTweets(_NAME_);
+            }
+        },
+
+        Run:function(callback){ // Rate Limited
+            var _NAME_ = 'mentions';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Run()');
+            var Run = new Request(api[_NAME_], 'get');
+                Run.dados = {count:config.start_count[_NAME_]};
+                Run.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = true;
+                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                if(n == 0){Chrowety[_NAME_].primeiro_lista = taid}
+                              });
+                              Chrowety[_NAME_]._loaded = true;
+                              Chrowety[_NAME_].ultimo = taid;
+                              //ContaTweets(_NAME_);
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                              if(callback){
+                                try{eval('Popup().'+callback)}catch(e){}
+                              }
+                };
+                Run.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
+                };
+                Run.init();
+        },
+        Since:function(since){ // Rate Limited
+            var _NAME_ = 'mentions';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Since()');
+            ContaTweets(_NAME_);
+            var last = since ? since : Chrowety[_NAME_].ultimo;
+            var novs = 0;
+            var Since = new Request(api[_NAME_], 'get');
+                Since.dados = {since_id: last};
+                Since.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                n++;
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = false;
+                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //> Salva o perfil
+                                var U = S2J(db.pega('profile_view'));
+                                var ts = J2S(w.user);
+                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                U[ts.screen_name] = ts;
+                                db.salva('profile_view', J2S(U));
+                                novs = n;
+                              });
+                              console.log('Since++ '+novs);
+                              Chrowety[_NAME_].ultimo = taid;
+                              console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
+                              Chrowety[_NAME_].Notify(novs);
+                };
+                Since.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                };
+                Since.init();
+        },
+        Max:function(max){ // Rate Limited
+            var _NAME_ = 'mentions';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Max()');
+            ContaTweets(_NAME_);
+            var first = max ? max : Chrowety[_NAME_].primeiro;
+            var re = '';
+            re = fec.html(_NAME_, {max:first});
+            if(!re){
+            var Max = new Request(api[_NAME_], 'get');
+                Max.dados = {count: config.old_count[_NAME_], max_id: first};
+                Max.sucesso = function(json,s){
+                              var id;
+                              $.each(json,function(n,w){
+                                if(n == 0){return;}
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                oid = id;
+                                ht = Layout(w, _NAME_, 'read');
+                                re = re+ht;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                              });
+                              Chrowety[_NAME_].primeiro = taid;
+                              Popup().ShowMoreOK(re, _NAME_);
+                              //eval('Popup().'+callback);
+                };
+                Max.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
+                };
+                Max.init();
+            }else{
+                console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Cache');
+                Popup().ShowMoreOK(re, _NAME_);
+            }
+        },
+
+    },
+
+
+    messages: {
+        NAME: 'messages',
+        _loaded:false,
+        scroll:0,
+        mostrando:0,
+        ultimo:null,
+        primeiro:null,
+        primeiro_lista:null,
+
+        Notify:function(n){
+            var _NAME_ = 'messages';
+            tws[_NAME_].new_count += n;
+            if(tws[_NAME_].new_count > 0){
+                var c = tws[_NAME_].new_count;
+                var d = tws[_NAME_].new_count+c;
+                chrome.browserAction.setBadgeText({text:''+c});
+                try{
+                  Popup().RefreshResult(d, 'home');
+                }catch(e){}
+                console.log('Chrowety.'+_NAME_+'.Notify(): '+d);
+                //ContaTweets(_NAME_);
+            }
+        },
+
+        Run:function(callback){ // Rate Limited
+            var _NAME_ = 'messages';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Run()');
+            var Run = new Request(api[_NAME_], 'get');
+                Run.dados = {count:config.start_count[_NAME_]};
+                Run.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = true;
+                                ht = LayoutMessage(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                if(n == 0){Chrowety[_NAME_].primeiro_lista = taid}
+                              });
+                              Chrowety[_NAME_]._loaded = true;
+                              Chrowety[_NAME_].ultimo = taid;
+                              //ContaTweets(_NAME_);
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                              if(callback){
+                                try{eval('Popup().'+callback)}catch(e){}
+                              }
+                };
+                Run.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
+                };
+                Run.init();
+        },
+        Since:function(since){// Rate Limited
+            var _NAME_ = 'messages';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Since()');
+            ContaTweets(_NAME_);
+            var last = since ? since : Chrowety[_NAME_].ultimo;
+            var novs = 0;
+            var Since = new Request(api[_NAME_], 'get');
+                Since.dados = {since_id: last};
+                Since.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                n++;
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = false;
+                                ht = LayoutMessage(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //> Salva o perfil
+                                var U = S2J(db.pega('profile_view'));
+                                var ts = J2S(w.user);
+                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                U[ts.screen_name] = ts;
+                                db.salva('profile_view', J2S(U));
+                                novs = n;
+                              });
+                              console.log('Since++ '+novs);
+                              Chrowety[_NAME_].ultimo = taid;
+                              //console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
+                              //Chrowety[_NAME_].Notify(novs);
+                };
+                Since.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                };
+                Since.init();
+        },
+        Max:function(max){// Rate Limited
+            var _NAME_ = 'messages';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Max()');
+            ContaTweets(_NAME_);
+            var first = max ? max : Chrowety[_NAME_].primeiro;
+            var re = '';
+            re = fec.html(_NAME_, {max:first});
+            if(!re){
+            var Max = new Request(api[_NAME_], 'get');
+                Max.dados = {count: config.old_count[_NAME_], max_id: first};
+                Max.sucesso = function(json,s){
+                              var id;
+                              $.each(json,function(n,w){
+                                if(n == 0){return;}
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                oid = id;
+                                ht = LayoutMessage(w, _NAME_, 'read');
+                                re = re+ht;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                              });
+                              Chrowety[_NAME_].primeiro = taid;
+                              Popup().ShowMoreOK(re, _NAME_);
+                              //eval('Popup().'+callback);
+                };
+                Max.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
+                };
+                Max.init();
+            }else{
+                console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Cache');
+                Popup().ShowMoreOK(re, _NAME_);
+            }
+        },
+
+    },
+
+    favorites: {
+        NAME: 'favorites',
+        _loaded:false,
+        scroll:0,
+        mostrando:0,
+        ultimo:null,
+        pagina:1,
+        primeiro_lista:null,
+
+        Notify:function(n){
+            var _NAME_ = 'messages';
+            tws[_NAME_].new_count += n;
+            if(tws[_NAME_].new_count > 0){
+                var c = tws[_NAME_].new_count;
+                var d = tws[_NAME_].new_count+c;
+                chrome.browserAction.setBadgeText({text:''+c});
+                try{
+                  Popup().RefreshResult(d, 'home');
+                }catch(e){}
+                console.log('Chrowety.'+_NAME_+'.Notify(): '+d);
+                //ContaTweets(_NAME_);
+            }
+        },
+
+        Run:function(callback){// Rate Limited
+            var _NAME_ = 'favorites';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Run()');
+            tws[_NAME_].total = 0;
+            var Run = new Request(api[_NAME_], 'get');
+                Run.dados = {page: 1};
+                Run.sucesso = function(json,s){
+                              var id;
+                              $.each(json.reverse(),function(n,w){
+                                taid = w.id;
+                                id = w.retweeted_status ? w.retweeted_status.id : w.id;
+                                aid = id;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].read = true;
+                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                var U = S2J(db.pega('profile_view'));
+                                var ts = J2S(w.user);
+                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                U[ts.screen_name] = ts;
+                                db.salva('profile_view', J2S(U));
+                              });
+                              Chrowety[_NAME_].pagina = 1;
+                              Chrowety[_NAME_]._loaded = true;
+                              clearInterval(time[_NAME_]);
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Run()', m(config.refresh[_NAME_]));
+                              if(callback){
+                                try{eval('Popup().'+callback)}catch(e){}
+                              }
+                };
+                Run.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
+                };
+                Run.init();
+        },
+
+        Max:function(pag){// Rate Limited
+            var _NAME_ = 'favorites';
+            if(!api_limit){return false}
+            console.log('Chrowety.'+_NAME_+'.Max()');
+            ContaTweets(_NAME_);
+            //var pag = pag ? pag : 1;
+            Chrowety[_NAME_].pagina += 1;
+            var pag = Chrowety[_NAME_].pagina;
+            var re = '';
+            var Max = new Request(api[_NAME_], 'get');
+                Max.dados = {page: pag};
+                Max.sucesso = function(json,s){
+                              var id;
+                              $.each(json,function(n,w){
+                                ht = Layout(w, _NAME_, 'read');
+                                re = re+ht;
+                                tws[_NAME_].total++;
+                                tws[_NAME_].tweets[tws[_NAME_].total] = w;
+                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                              });
+                              Popup().ShowMoreOK(re, _NAME_);
+                };
+                Max.erro = function(){
+                    console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
+                };
+                Max.init();
+        },
+
+    },
+};
+
+
+
+function LayoutMessage(w, time){
+  var user = w.sender.screen_name,
+  nome = w.sender.name,
+  txt =  w.text,
+  foto = w.sender.profile_image_url,
+  data = w.created_at,
+  tid = w.id;
+
+  read = w.read ? 'read' : 'unread';
+  if(w.reply_backup){
+      var reply_backup = w.reply_backup;
+  }else{
+      var reply_backup = '';
+  }
+  //Links de Usuarios
+  //txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" onclick="ShowUser(\'$2\')">$2</a>');
+  //Links de Tags
+  //txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this);">$3</a>');
+
+  r =
+  '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
+            '<div class="twet '+read+'">' +
+                '<div class="text">' +
+                    '<input id="tid_'+tid+'" value="'+tid+'" type="hidden" />' +
+                    '<input id="user_'+tid+'" value="'+user+'" type="hidden" />' +
+                    '<input id="data_'+tid+'" value="'+data+'" type="hidden" />' +
+                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
+                      '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
+                    '</a>' +
+                    '<span id="texto_'+tid+'" class="texwt" data="'+txt+'">'+txt+'</span>' +
+                '</div>' +
+                '<div class="cinza">' +
+                    '<span title="'+tid+'" class="cinza p8 tweetdata" data="'+data+'"></span>' +
+                '</div>' +
+                '<a onclick="ReplyDM('+tid+', \''+time+'\');" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
+            '</div>' +
+            '<div id="reply_'+tid+'" class="reply dn dm" title="'+Traduz('reply')+' '+user+'">' +
+              '<!--<div class="dm_title">'+
+                '<span class="dm_text">DM</span> '+
+                '<span class="dm_to">to</span> '+
+                '<span class="dm_user">ElinhoLeal</span'+
+              '</div><br />-->'+
+              '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
+              '<span id="reply_rt_'+tid+'" class="dn">' +
+                 '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
+                 '<button id="botao_'+tid+'" onclick="doReplyDM('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Enter)">'+Traduz('done')+'</button>†††' +
+                 '<a onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
+              '</span>' +
+              '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
+              '<span id="reply_status_'+tid+'" class="reply_left"></span>' +
+            '</div>' +
+    '</div>';
+  return r;
+}
+
+
+function Layout(w, time){
+  var user = w.user.screen_name,
+  nome = w.user.name,
+  classic_txt = w.retweeted_status ? w.text : '';
+  txt = w.retweeted_status ? w.retweeted_status.text : w.text,
+  foto = w.user.profile_image_url,
+  data = w.created_at,
+  source = w.source,
+  tid = w.id;
+
+  read = w.read ? 'read' : 'unread';
+
+  var in_reply = w.in_reply_to_status_id ? '<a class="cinza p8" href="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" onclick="Link(this);" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
+  var Retweeted = '';
+  var RT  = db.pega('modo_retweet') == 'normal' ?
+  '<a onclick="Retweet('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>' :
+  '<a onclick="RetweetOficial('+tid+');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+
+  if(w.retweeted_status){
+    rt_user = w.user.screen_name;
+
+    RT = db.pega('user') == user ? '' : RT;
+    user = w.retweeted_status.user.screen_name;
+    nome = w.retweeted_status.user.name;
+    txt = w.retweeted_status.text;
+    foto = w.retweeted_status.user.profile_image_url;
+    data = w.retweeted_status.created_at;
+    source = w.retweeted_status.source;
+    tid = w.retweeted_status.id;
+    in_reply = w.retweeted_status.in_reply_to_status_id ?
+    '<a class="cinza p8" href="http://twitter.com/'+w.retweeted_status.in_reply_to_screen_name+'/status/'+w.retweeted_status.in_reply_to_status_id+'" onclick="Link(this);" title="'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'</a>'
+    : '';
+    txt = '<span class="rts" title="'+Traduz('retweeted_by')+' '+rt_user+'">Retweeted</span> <a class="reter" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a> '+txt;
+    Retweeted = '<br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')">'+rt_user+'</a>';
+    Retweeted += ' <span class="opts2">(<span class="cinza p8 tweetdata" data="'+w.created_at+'"></span>)</span>';
+    RT = '<a onclick="RetweetRT('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+  }
+
+  var fav = w.favorited ? '<a id="tweet_fav_'+tid+'" class="star fr" fav="true" onclick="UnFavorite('+tid+', \''+time+'\')" title="'+Traduz('unfavorite')+'">'+Traduz('unfavorite')+'</a><img id="tweet_ifav_'+tid+'" src="" class="fr dn">' :
+                      '<a id="tweet_fav_'+tid+'" class="star opts fr" onclick="Favorite('+tid+', \''+time+'\')" title="'+Traduz('favorite')+'">'+Traduz('favorite')+'</a><img id="tweet_ifav_'+tid+'" src="" class="fr dn">';
+
+  var del = db.pega('user') == user ? '<a onclick="Deleta('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' : '';
+
+  // Links Normais
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this);">$2</a> ');
+
+  //Twitpic
+  txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
+
+  //Tweetphoto | Pic.gd
+  txt = txt.replace(/((https?):\/\/(tweetphoto.com\/|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
+
+  //YouTube http://www.youtube.com/watch?v=sG5lpGdNd5E
+  txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
+
+
+  //Links sem Http
+  txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this);">$2</a> ');
+
+  //Links de Usuarios
+  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
+
+  // Links Normais
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this);">$2</a> ');
+
+  //Links de Tags
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this);">$3</a>');
+
+  txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
+
+  source = source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this);"');
+  var careator = !w.retweeted_status ?
+                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+
+                        '<span class="creator">'+user+'</span>'+
+                    '</a><br />' : '';
+  var creator = '';
+
+  if(w.reply_backup){
+    var reply_backup = w.reply_backup;
+    //var reply_backup = '';
+    var cdn = 'dn'
+  }else{
+    var reply_backup = '';
+    var cdn = 'dn';
+  }
+
+  r =
+  '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
+            '<div class="twet '+read+'">' +
+                '<div class="text">' +
+                    '<input id="tid_'+tid+'" value="'+tid+'" type="hidden" />' +
+                    '<input id="user_'+tid+'" value="'+user+'" type="hidden" />' +
+                    '<input id="data_'+tid+'" value="'+data+'" type="hidden" />' +
+                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
+                      '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
+                    '</a>' +
+                    creator+
+                    fav+
+                    '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'">'+txt+'</span>' +
+                '</div>' +
+                '<div class="cinza">' +
+                    '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" onclick="Link(this);" data="'+data+'"></a></span>' +
+                    ' via '+source+' ' +
+                    in_reply +
+                    RT +
+                    del +
+                    Retweeted +
+                '</div>' +
+                '<a onclick="Reply('+tid+', false, \''+time+'\');" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
+            '</div>' +
+
+            '<div id="reply_'+tid+'" class="reply '+cdn+'" title="'+Traduz('reply')+' '+user+'">' +
+              '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
+              '<span id="retweet_choice_'+tid+'" class="dn">' +
+                  '<button id="rt_now_'+tid+'" onclick="RetweetOficial('+tid+', \''+time+'\')" title="'+Traduz('retweet_now')+'">'+Traduz('retweet_now')+'</button>†††' +
+                  '<button id="edit_rt_'+tid+'" onclick="RetweetEdit('+tid+', \''+time+'\');" title="'+Traduz('edit')+'">'+Traduz('edit')+'</button>††' +
+                  '<a onclick="ReplyCancel('+tid+', \''+time+'\')" class="p8" title="'+Traduz('cancel')+'">'+Traduz('cancel')+'</a>' +
+              '</span>' +
+              '<span id="reply_rt_'+tid+'" class="dn">' +
+                 '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
+                 '<button id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>†††' +
+                 '<a onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
+              '</span>' +
+              '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
+              '<span id="reply_status_'+tid+'" class="reply_left"></span>' +
+            '</div>' +
+    '</div>';
+  return r;
+}
+
+function pause(milliseconds) {
+	var dt = new Date();
+	while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
+}
+
+
+var Utils = {
+    currentURL:null,
+
+    GetTabUrl: function(){
+        chrome.tabs.getSelected(null, function(tab) {
+               Utils.currentURL = tab.url;
+               return tab.url;
+        });
+    },
+
+    Long:{
+
+        Untrim:function(ShortUrl, tid, tm){
+            var Un = new Request(api.untrim, 'post', 'html');
+                Un.dados = {url: ShortUrl};
+                Un.sucesso = function(re){
+                    console.log(re);
+                    var url = re.getElementsByTagName('a');
+                    url = url[url.length-1].innerText;
+                    console.log(url);
+                    //Popup().ShortLinkOK(tid, tm, url);
+                };
+                Un.erro = function(e){
+                    console.log('Ouve um erro no Untr.im');
+                };
+                Un.init();
+        },
+    },
+
+    Short:{
+
+      title:null,
+      link:null,
+
+      short:function(LongUrl, tid, tm, cb){
+        switch(config.url_shortener){
+            case '3.ly':
+                var LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.Threely(LongUrl, tid, tm, null, cb);
+                break;
+            case 'migre.me':
+                var LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.MigreMe(LongUrl, tid, tm, cb);
+                break;
+            case 'bit.ly':
+                Utils.Short.BitLy(LongUrl, tid, tm, null, cb);
+                break;
+            case 'j.mp':
+                Utils.Short.BitLy(LongUrl, tid, tm, true, cb);
+                break;
+            case 'is.gd':
+                var LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.Threely(LongUrl, tid, tm, 'isgd', cb);
+                break;
+            case 'tr.im':
+                var LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.Threely(LongUrl, tid, tm, 'trim', cb);
+                break;
+            default:
+                var LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.Threely(LongUrl, tid, tm, null, cb);
+        }
+      },
+
+
+      BitLy:function(LongUrl, tid, tm, jmp, callback){
+        console.log('Shorting URL: '+LongUrl+' With: BitLy');
+        var shorted;
+        var ap = jmp ? api.jmp_short : api.bitly_short;
+        var Bit = new Request(ap, 'get', 'json');
+            Bit.dados = {
+              longUrl: LongUrl,
+              apiKey: api.bitly_key,
+              version: '2.0.1',
+              login: 'vjnrv'
+            };
+            Bit.sucesso = function(re){
+                var url = re.results[LongUrl].shortUrl;
+                url = url ? url : '';
+                Utils.Short.link = url;
+                shorted = url;
+                console.log(url);
+                if(!callback){
+                    Popup().ShortLinkOK(tid, tm, url);
+                }else{
+                    console.log('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                    eval('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                }
+            };
+            Bit.erro = function(e){
+                console.log('Erro no BitLy');
+                console.log(e.responseText);
+                Popup().ShortLinkOK(tid, tm, '');
+            };
+            Bit.init();
+        return shorted;
+      },
+
+      MigreMe:function(LongUrl, tid, tm, callback){
+        console.log('Shorting URL: '+LongUrl+' With: Migre.me');
+        var shorted;
+        var Mi = new Request(api.migre_short, 'get', 'xml');
+            Mi.dados = {url: LongUrl};
+            Mi.sucesso = function(re){
+                var url = $('item > migre', $(re)).text();
+                Utils.Short.link = url;
+                shorted = url;
+                console.log(url);
+                if(!callback){
+                    Popup().ShortLinkOK(tid, tm, url);
+                }else{
+                    console.log('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                    eval('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                }
+            };
+            Mi.erro = function(e){
+                console.log('Erro no Migre.me');
+                console.log(e.responseText);
+                Popup().ShortLinkOK(tid, tm, '');
+            };
+            Mi.init();
+        return shorted;
+      },
+
+      Threely:function(LongUrl, tid, tm, other, callback){
+        console.log('Shorting URL: '+LongUrl+' With: 3.ly/is.gd');
+        var shorted;
+        var ap,d;
+        switch(other){
+            case 'isgd':
+                console.log('Threely > is.gd');
+                ap = api.isgd;
+                d  = {longurl: LongUrl};
+                break;
+            case 'trim':
+                console.log('Threely > tr.im');
+                ap = api.trim;
+                d  = {url: LongUrl};
+                break;
+            default:
+                console.log('Threely > 3.ly');
+                ap = api.threely;
+                d  = {api: 'em5893833', u: LongUrl};
+        }
+        var Ly = new Request(ap, 'get', 'html');
+            Ly.dados = d;
+            Ly.sucesso = function(url){
+                Utils.Short.link = url;
+                shorted = url;
+                console.log(url);
+                if(!callback){
+                    Popup().ShortLinkOK(tid, tm, url);
+                }else{
+                    console.log('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                    eval('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                }
+            };
+            Ly.erro = function(e){
+                console.log('Erro no 3.ly/is.gd');
+                console.log(e.responseText);
+                Popup().ShortLinkOK(tid, tm, '');
+            };
+            Ly.init();
+        return shorted;
+      },
+
+
+    },
+
+    Yfrog:{
+        thumb:function(url){
+            return url+'.th.jpg';
+        }
+    },
+
+    Twitpic:{
+        vendo:null,
+        thumb:function(id){
+            Utils.Twitpic.vendo = id;
+            var size = 'thumb';
+            return api.twitpic+size+'/'+id;
+        }
+    },
+
+    Tweetphoto:{
+
+        post:function(){
+            var tp = new Request(api.tweetphoto_post, 'post');
+                tp.dados = {
+                    TPAPIKEY:'f3ccec03ac7803188d3ce28dd4867334',
+                    TPMIMETYPE: 'image/jpg',
+                };
+        },
+
+        thumb:function(url){
+            var size = 'medium';
+            return api.tweetphoto_view+'?size='+size+'&url='+url;
+        }
+    }
+
+};
+
+function Logout(){
+    Chrowety.logout();
+}
+
+function AutoLogin(){
+    console.log('AutoLogin()');
+    Logado = true;
+    jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+db.pega('z_z'))}});
+    CheckLimit('Chrowety.Run()');
+}
+
+function Login(user,senha,lembra){
+  console.log('Login()');
+  var login = btoa(user+':'+senha);
+  jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+login)}});
+  Chrowety.login(lembra, login);
+}
+
+function BrowserAction(){
+  var canvas = document.getElementById('canvas');
+  canvasContext = canvas.getContext('2d');
+  chrome.browserAction.setBadgeBackgroundColor({color:[119, 190, 190, 190]});
+  //chrome.browserAction.setBadgeText({text:"0"});
+  //chrome.browserAction.setIcon({path:"favicon.ico"});
+  chrome.browserAction.setTitle({title:"Chrowety"});
+}
+
+
+function init() {
+  BrowserAction();
+  LoadConfig();
+  document.charset = language.charset;
+  $('meta')[0].charset = language.charset;
+  if(db.pega('lembra')){
+    AutoLogin();
+  }
+}
+$(document).ready(init);
+</script>
+</head>
+<body>
+<canvas id="canvas" width="27" height="23"></canvas>
+</body>
+</html>
