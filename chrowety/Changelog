@@ -1,0 +1,61 @@
+CHANGE LOG:
+
+1.6.101 - 13/12/09
+- Introduces "Share this page" button for fast sharing content
+- Implemented cache for old tweets
+- Implemented Quick profile view (disabled for API limit reasons)
+- Show if user is following you
+- Fixed on open update box hide "Show more.." link
+
+1.6.0.567 - 13/12/09
+- Fixed on hit enter sends direct messages as normal tweet
+
+1.6.0.4 - 13/12/09
+- Added option to change twitter question
+- Fixed small bugs
+
+1.6.0.2 - 12/12/09
+- Added close button in options page
+- Added option to change tweet font-size and text shadow
+- Added option to change URL Shortener
+- Added more URL Shorteners (migre.me, bit.ly, j.mp, is.gd)
+- Fixed favorites requests error
+
+1.6.0.1 - 11/12/09
+- Finished Favorites timeline
+- Added API Requests number and porcentage for all timelines refresh time (need be fixed)
+- Started implementing URL Longer (http://untr.im)
+
+1.5.8 - 10/12/09
+- Implemented Mentions/Messages/Favorites
+- Fixed*When update user information clear caches from other users profiles
+- Removed text shadow (Future to add option to enable)
+
+1.5.32 - 07/12/09
+- Improved Speed
+- Show "in reply to"
+- User Profile Preview
+- Zoom User pictures
+- See photos from Twitpic/Tweetphoto/Pic.gd
+- See videos from Youtube
+- Short URL with 3.ly
+- Options page
+- Initial muiti-language support
+- Fix incorrect number of unreads
+
+1.4.3 - 02/12/09
+- New Retweet (The simple RT still avaiable)
+- Automaticly save draft for all individual Replies and Update
+- Unfavorite/Favorite tweets
+- Extension Logo
+- Minimal user info bar
+- Remember scrollbar position
+- Use HTTPS
+- Fix not load after logout
+- Fix not show tweet after update
+
+1.4 - 21/11/09
+- Release in Browser Action
+
+1.0 -
+- Toolstrip
