@@ -1,9 +1,0 @@
-Wishlist:
-
-- Mix messages sent with received
-- Caches tweets for offline access and fast view
-- OAuth to see "from Chrowety", i wanna make it optionaly cause few users can't access "twitter.com"
-- Use API Proxy
-- Alerts tweets (like Tweetdeck)
-- translate tweet
-- Use openDatabase API to save twets local
