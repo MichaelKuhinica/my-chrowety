@@ -174,7 +174,6 @@ var LT = {
         var name = 'favorites';
         var loaded = Controller().Chrowety[name]._loaded;
         if(!loaded){
-          Controller().Chrowety[name].Run('LT.favorites()');
           Controller().Chrowety[name].scroll = 0;
           return false;
         }
@@ -255,11 +254,20 @@ function RefreshTweets(time){
 
 function RefreshLimit(n){
     $('#load_image').hide();
-    if(n == 0){
-        $('#load_result').text(Traduz('api_excedeed'));
+    if(n){
+      if(n == 0){
+          $('#load_result').text(Traduz('api_excedeed'));
+      }else{
+          //$('#load_result').text('Remaining API: '+n);
+      }
     }else{
-        //$('#load_result').text('Remaining API: '+n);
+      if(Controller().api_limit == 0){
+          $('#load_result').text(Traduz('api_excedeed'));
+      }else{
+
+      }
     }
+
     $('#load').fadeIn();
 }
 
@@ -961,6 +969,12 @@ function Login(){
   return false;
 }
 
+function RequestToken(){
+    $('#autorize_button')[0].setAttribute("disabled","disabled");
+    $('#autorize_button').html('<img id="autorize_image" src="img/load.gif" />');
+    Controller().OAuth.DeletaToken('Popup().init()');
+}
+
 function init(){
   var auth = 'oauth';
   if(!Controller().Logado){
@@ -980,14 +994,18 @@ function init(){
     LoginUp = true;
     return false;
   }
+
   document.charset = Controller().language.charset;
   $('meta')[0].charset = Controller().language.charset;
-  Controller().CheckLimit('Popup().LT.Auto()');
+
+  LoginUp = false;
 
   LoadProfile();
+  RefreshLimit();
   $('#login').hide();
-  LoginUp = false;
+
   $('#reply_text_update').val(Slogan);
+
   $('#init').show();
 
   if(Controller().Chrowety.profile_last_view){
@@ -997,20 +1015,7 @@ function init(){
     window.setTimeout('Twitpic(Controller().Utils.Twitpic.vendo)', 90);
   }
 
-
   LT.Auto();
-
-  /*
-  if(db.pega('AbaAtiva') && Controller().Chrowety[db.pega('AbaAtiva')]._loaded){
-    LT[db.pega('AbaAtiva')]();
-  }else{
-    if(Controller().Chrowety.home._loaded){
-        LT.home();
-    }else{
-        Controller().Chrowety.home.Run('LT.home()');
-    }
-  }
-  */
 }
 
 $(document).ready(init);
@@ -1222,6 +1227,8 @@ $(document).ready(init);
     <form onsubmit="return OAuthLogin();">
       <br />
       <button disabled="disabled" id="autorize_button" type="submit"><img id="autorize_image" src="img/load.gif" /></button>
+      <br /><br />
+      <a onclick="RequestToken();" class="p8">(Request a new Autorization)</a>
       <br />
       <br />
     </form>

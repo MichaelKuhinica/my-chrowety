@@ -125,27 +125,28 @@ function Request(url, met, type, ctype){
           );
         };
 }
+var tBase = 'https://twitter.com';
 
 var api = {
-    access_token: 'https://twitter.com/oauth/access_token',
-    request_token: 'https://twitter.com/oauth/request_token',
-    autorize: 'https://twitter.com/oauth/authorize',
+    access_token:                  tBase+ '/oauth/access_token',
+    request_token:                 tBase+ '/oauth/request_token',
+    autorize:                      tBase+ '/oauth/authorize',
 
-    login:'https://twitter.com/account/verify_credentials.json',
-    logout:'https://twitter.com/account/end_session.json',
-    rate:'https://twitter.com/account/rate_limit_status.json',
-    home:'https://twitter.com/statuses/home_timeline.json',
-    friends:'https://twitter.com/statuses/friends_timeline.json',
-    mentions:'https://twitter.com/statuses/mentions.json',
-    messages:'https://twitter.com/direct_messages.json',
-    favorites:'https://twitter.com/favorites.json',
-    update:'https://twitter.com/statuses/update.json',
-    updateDM:'https://twitter.com/direct_messages/new.json',
-    user_show:'https://twitter.com/users/show.json',
-    retweet:function(id){return 'https://twitter.com/statuses/retweet/'+id+'.json'},
-    destroy:function(id){return 'https://twitter.com/statuses/destroy/'+id+'.json'},
-    favorite:function(id){return 'https://twitter.com/favorites/create/'+id+'.json'},
-    unfavorite:function(id){return 'https://twitter.com/favorites/destroy/'+id+'.json'},
+    login:                         tBase+ '/account/verify_credentials.json',
+    logout:                        tBase+ '/account/end_session.json',
+    rate:                          tBase+ '/account/rate_limit_status.json',
+    home:                          tBase+ '/statuses/home_timeline.json',
+    friends:                       tBase+ '/statuses/friends_timeline.json',
+    mentions:                      tBase+ '/statuses/mentions.json',
+    messages:                      tBase+ '/direct_messages.json',
+    favorites:                     tBase+ '/favorites.json',
+    update:                        tBase+ '/statuses/update.json',
+    updateDM:                      tBase+ '/direct_messages/new.json',
+    user_show:                     tBase+ '/users/show.json',
+    retweet:function(id){return    tBase+ '/statuses/retweet/'+id+'.json'},
+    destroy:function(id){return    tBase+ '/statuses/destroy/'+id+'.json'},
+    favorite:function(id){return   tBase+ '/favorites/create/'+id+'.json'},
+    unfavorite:function(id){return tBase+ '/favorites/destroy/'+id+'.json'},
 
     googl:'http://goo.gl/api/url',
     threely:'http://3.ly/',
@@ -161,14 +162,7 @@ var api = {
     trim:'http://api.tr.im/v1/trim_simple',
     untrim:'http://untr.im/api/ajax/api',
 };
-var time = {
-    profile:null,
-    home:null,
-    mentions:null,
-    limit:null,
-    home2:null,
-    home3:null
-};
+var time = {};
 
 var Logado=false,AuthMode,_iniciou,total=0,new_count=0,api_limit = null,api_checked=false,aid,oid,taid;
 
@@ -192,22 +186,22 @@ function TweetData(TD) {
   } else if(Calc < 60 * 60) {
           var Min = parseInt(Calc / 60);
           var s = Traduz('minute_ago').replace('%s', Min);
-              s = s.replace('& ', ((Min > 1) ? language.plural_word+' ' : ""));
+              s = s.replace('& ', ((Min > 1) ? language.plural_word+' ' : " "));
           return s;
   } else if(Calc < 60 * 60 * 24) {
           var Hor = parseInt(Calc / (60 * 60));
           var s = Traduz('about_hour_ago').replace('%s', Hor);
-              s = s.replace('& ', ((Hor > 1) ? language.plural_word+' ' : ""));
+              s = s.replace('& ', ((Hor > 1) ? language.plural_word+' ' : " "));
           return s;
   } else if(Calc < 60 * 60 * 24 * 30) {
           var Day = parseInt(Calc / (60 * 60 * 24));
           var s = Traduz('about_day_ago').replace('%s', Day);
-              s = s.replace('& ', ((Day > 1) ? language.plural_word+' ' : ""));
+              s = s.replace('& ', ((Day > 1) ? language.plural_word+' ' : " "));
           return s;
   } else if(Calc < 60 * 60 * 24 * 30 * 12) {
           var Month = parseInt(Calc / (60 * 60 * 24 * 30));
           var s = Traduz('about_month_ago').replace('%s', Month);
-              s = s.replace('& ', ((Month > 1) ? "e"+language.plural_word+' ' : ""));
+              s = s.replace('& ', ((Month > 1) ? "e"+language.plural_word+' ' : " "));
           return s;
   } else {
           return Traduz('years_ago');
@@ -326,10 +320,10 @@ var DefaultConfig = {
     refresh:{
       home:3,
       mentions:5,
-      messages:10,
+      messages:7,
       favorites:60,
       limit_check:3,
-      profile:20,
+      profile:60,
     }
 };
 
@@ -879,9 +873,9 @@ var Chrowety = {
             if(tws[_NAME_].new_count > 0){
                 var c = tws[_NAME_].new_count;
                 chrome.browserAction.setBadgeText({text:''+c});
-                Alerts(_NAME_, tws[_NAME_].new_count);
+                if(n){Alerts(_NAME_, n)}
                 try{
-                  Popup().RefreshResult(c, _NAME_);
+                    Popup().RefreshResult(c, _NAME_);
                 }catch(e){}
                 console.log('Chrowety.'+_NAME_+'.Notify(): '+c);
                 //ContaTweets(_NAME_);
@@ -1038,7 +1032,7 @@ var Chrowety = {
                 var c = tws[_NAME_].new_count;
                 var d = tws[_NAME_].new_count+c;
                 chrome.browserAction.setBadgeText({text:''+c});
-                Alerts(_NAME_, tws[_NAME_].new_count);
+                if(n){Alerts(_NAME_, n)}
                 try{
                   Popup().RefreshResult(d, _NAME_);
                 }catch(e){}
@@ -1181,7 +1175,7 @@ var Chrowety = {
                 var c = tws[_NAME_].new_count;
                 var d = tws[_NAME_].new_count+c;
                 chrome.browserAction.setBadgeText({text:''+c});
-                Alerts(_NAME_, tws[_NAME_].new_count);
+                if(n){Alerts(_NAME_, n)}
                 try{
                   Popup().RefreshResult(d, 'home');
                 }catch(e){}
@@ -1262,8 +1256,8 @@ var Chrowety = {
                               //Chrowety[_NAME_].Notify(novs);
                 };
                 Since.erro = function(){
-                    console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
                     time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                    console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
                 };
                 Since.initOAuth();
         },
@@ -1985,17 +1979,11 @@ var Utils = {
 
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
   if(request.novos_tweets) {
+    var alerta = new Audio('http://vjnrv.net/Labs/Chrowety/Res/alerta.wav');
+        alerta.play();
     sendResponse({
       'tweets': fec.last(request.tm, request.total, request.max)
     });
-    //var Audio = document.createElement('audio');
-        //Audio.id = 'Chrowety_Alerta';
-        //Audio.src = chrome.extension.getURL('img/alerta.wav');
-    //$(document.body).append(Audio);
-    //document.getElementById('Chrowety_Alerta').play();
-    var mp3 = 'http://vjnrv.net/Labs/Chrowety/Res/alerta.wav'
-    var music = new Audio(mp3);
-    music.play();
   }
 
   if(request.autorisar){
@@ -2085,6 +2073,5 @@ $(document).ready(init);
 </head>
 <body>
 <canvas id="canvas" width="27" height="23"></canvas>
-<!--<audio id="Chrowety_Alerta" src="" autoplay/>-->
 </body>
 </html>
