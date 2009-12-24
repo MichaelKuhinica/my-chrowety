@@ -3,6 +3,7 @@ var language = {
   "author": "Pedro Junior",
   "id": "en",
   "charset": "UTF-8",
+  "plural_word": "s",
   "en":{
           "slogan": 'What\'s Up?',
           "home": "Home",
@@ -38,7 +39,7 @@ var language = {
           "unfavorite": "Unfavorite",
           "show_more": "Show More...",
           "no_more_tweets": "No more tweets found",
-          "new_tweet": "New tweet&",
+          "new_tweet": "New tweet& ",
           "logging": "Logging In...",
           "sucess_login": "Sucessfully logged...",
           "tweets": "Tweets",
@@ -75,6 +76,15 @@ var language = {
           "interface": "Interface",
           "reset2": "Reset",
           "share_page": "Share this Page",
-          "following_you": "Following you",                                        
+          "following_you": "Following you",
+          "alerts": "Alerts",
+          "max_tweets_per_alerts": "Tweets per Alert",
+          "to": "To",
+          "forbidden": "Forbidden",
+          "error": "Error",
+          "twitter_question": "Twitter Question",
+          "text_shadow": "Text Shadow",
+          "tweet_font_size": "Tweet font size",
+          "open_links_in_background": "Open links in background",
   }
 };

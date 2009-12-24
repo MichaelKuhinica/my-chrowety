@@ -3,6 +3,7 @@ var language = {
   "author": "Pedro Junior",
   "id": "pt_br",
   "charset": "iso-8859-1",
+  "plural_word": "s",
   "pt_br":{
           "slogan": 'Iae, que tu Manda?',
           "home": "Inicio",
@@ -38,7 +39,7 @@ var language = {
           "unfavorite": "Remover dos Favoritos",
           "show_more": "Mostrar mais...",
           "no_more_tweets": "Sem mais tweets",
-          "new_tweet": "Novo tweet&",
+          "new_tweet": "Novo tweet& ",
           "logging": "Entrando...",
           "sucess_login":"Logado com sucesso...",
           "tweets": "Tuites",
@@ -75,6 +76,15 @@ var language = {
           "interface": "Interface",
           "reset2": "Restaurar",
           "share_page": "Compartilhar página",
-          "following_you": "Seguindo você",           
+          "following_you": "Seguindo você",
+          "alerts": "Alertas",
+          "max_tweets_per_alerts": "Tweets por Alerta",
+          "to": "Para",
+          "forbidden": "Proibido",
+          "error": "Erro",
+          "twitter_question": "Pergunta do Twitter",
+          "text_shadow": "Sombra no texto",
+          "tweet_font_size": "Tamanho da fonte do Tweet",
+          "open_links_in_background": "Abrir os links em segundo plano",
   }
 };

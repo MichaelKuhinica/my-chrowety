@@ -1,6 +1,7 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
+<meta charset="">
 <link type="text/css" rel="stylesheet" href="css/base.css" />
 <script type="text/javascript" src="js/jquery.js"></script>
 <script type="text/javascript">
@@ -270,7 +271,6 @@ function SearchData(){
 
 function ShowMore(timeline){
     $('#showMore_link_'+timeline).html($('<img id="showMore_load" src="img/load.gif" />'));
-    //Controller().ShowMore(timeline);
     Controller().Chrowety[timeline].Max();
 
 }
@@ -286,14 +286,19 @@ function ShowMoreOK(old, timeline){
         $('#twets_'+timeline).append($('<div class="no_more">'+Traduz('no_more_tweets')+'</div>'));    }
 }
 
-function Link(e, h){
+function Link(e, ev, h){
     if(h){
       var href = 'chrome-extension://'+location.hostname+'/conf.html';
       log('Creating Tab: '+href);
       chrome.tabs.create({url: href});
     }else{
-      log('Creating Tab: '+e.href);
-      chrome.tabs.create({url: e.href});
+      var b = ev.button;
+      if(b==0 && Controller().config.link_in_bg !="true"){
+          chrome.tabs.create({url: e.href});
+      }else if(b==1 || Controller().config.link_in_bg == "true"){
+          chrome.tabs.create({url: e.href, selected: false});
+      }
+
     }
 }
 
@@ -331,8 +336,8 @@ function Count(tid, time, pulaBak){//Conta o limite de caracteres do tweet e sal
 
 function Deleta(tid, tm){
   Controller().Chrowety.deleta(tid, tm);
-  $('#tweply_'+tid).fadeOut(function(){
-    $('#tweply_'+tid).remove();
+  $('#twets_'+tm+' #tweply_'+tid).fadeOut(function(){
+    $('#twets_'+tm+' #tweply_'+tid).remove();
   });
 }
 
@@ -349,9 +354,11 @@ function UnFavorite(tid, tm){
   $('#twets_'+tm+' #tweet_fav_'+tid).addClass("dn");
   $('#twets_'+tm+' #tweet_ifav_'+tid).attr('src', 'img/favload.gif');
   $('#twets_'+tm+' #tweet_ifav_'+tid).show();
-  $('#twets_'+tm+' #tweply_'+tid).fadeOut("slow", function(){
-    $('#twets_'+tm+' #tweply_'+tid).remove();
-  });
+  if(tm == 'favorites'){
+    $('#twets_'+tm+' #tweply_'+tid).fadeOut("slow", function(){
+      $('#twets_'+tm+' #tweply_'+tid).remove();
+    });
+  }
 }
 
 function FavOK(tid, fav, tm){
@@ -383,22 +390,27 @@ function UpdateOK(re, tm){
   HideShortLink('update', 'update');
 }
 
+function UpdateFAIL(tid, tm, status){
+  $('#reply_status_update').html('<span style="color:red">'+Traduz(status, '.')+'</span>');
+}
 
+var AtalhoDisabled = false;
 function Atalho(evt, tid, tm) {
   var key = evt.keyCode;
   if(evt.ctrlKey){// Ctrl
     switch(key){
         case 8013: // Ctrl + Enter
                 if(!tid && !tm){
-                    Update();
+                    //Update();
                 }
                 evt.returnValue=false;
                 break;
         case 65: // A
                 if(tid == 'update'){
-                    UpdateCancel();
+                    //$('#botao_update_cancel').click();
                 }else{
-                    ReplyCancel(tid, tm);
+                    //ReplyCancel(tid, tm);
+                    //$('#botao_'+tid+'_cancel').click();
                 }
                 evt.returnValue=false;
                 break;
@@ -406,25 +418,32 @@ function Atalho(evt, tid, tm) {
   }else{
     switch(key){
         case 13: // Enter
+            if($('#twets_'+tm+' #botao_'+tid).attr('disabled') != "disabled" || !AtalhoDisabled){
                 if(tid == 'update'){
                     if(!$("#reply_text_update").val().length){
                         evt.returnValue=false;
                     }else{
-                        DisableButton('update', 'update');
-                        doUpdate();
+                        //DisableButton('update', 'update');
+                        ///doUpdate();
+                        $('#botao_update').click();
                     }
                 }else{
                     if(!$('#twets_'+tm+' #reply_text_'+tid).val().length){
                         evt.returnValue=false;
                     }else{
                         if(tm == 'messages'){
-                            doReplyDM(tid, tm);
+                            //doReplyDM(tid, tm);
+                            $('#twets_'+tm+' #botao_'+tid).click();
+                            AtalhoDisabled = true;
                         }else{
-                            doReply(tid, tm);
+                            //doReply(tid, tm);
+                            $('#twets_'+tm+' #botao_'+tid).click();
+                            AtalhoDisabled = true;
                         }
                     }
                 }
                 evt.returnValue=false;
+            }
                 break;
     }
   }
@@ -471,7 +490,21 @@ function UpdateCancel(){
   });
 }
 
+function ReplyDMFAIL(tid, time, status){//Esconde o elemento de Reply
+  AtalhoDisabled = false;
+  $('#twets_'+time+' #reply_status_'+tid).html('<span style="color:red">'+Traduz(status, '.')+'</span>');
+  /*
+  $('#twets_'+time+' #reply_'+tid).slideUp(function(){
+     $('#twets_'+time+' #reply_text_'+tid).val('');
+     Count(tid, time);
+     HideShortLink(tid);
+     $('#twets_'+time+' #reply_status_'+tid).text('');
+  });
+  */
+}
+
 function ReplyDMOK(tid, time){//Esconde o elemento de Reply
+  AtalhoDisabled = false;
   $('#twets_'+time+' #reply_status_'+tid).text(Traduz('ok', '...'));
   $('#twets_'+time+' #reply_'+tid).slideUp(function(){
      $('#twets_'+time+' #reply_text_'+tid).val('');
@@ -481,25 +514,35 @@ function ReplyDMOK(tid, time){//Esconde o elemento de Reply
   });
 }
 
-function ReplyDM(tid, time){
+function ReplyDM(tid, time, other){
   var bak  = $('#twets_'+time+' #reply_text_'+tid).attr('backup');
   var txt  = bak ? bak : '';
+  $('#twets_'+time+' #reply_text_'+tid).removeAttr('disabled');
+  $('#twets_'+time+' #retweet_choice_'+tid).hide();
+  $('#twets_'+time+' #reply_rt_'+tid).show();
+  $('#twets_'+time+' #botao_'+tid).removeAttr('onclick');
+
+
+  $('#twets_'+time+' #botao_'+tid)[0].onclick = function(){
+        doReplyDM(tid, time, (other ? true : false));
+  };
   $('#twets_'+time+' #reply_'+tid).slideDown("fast", function(){
      $('#twets_'+time+' #reply_rt_'+tid).show();
      $('#twets_'+time+' #reply_text_'+tid).focus();
      $('#twets_'+time+' #reply_text_'+tid).val(txt);
      Count(tid, time, true);
+     console.log($('#twets_'+time+' #botao_'+tid)[0]);
   });
 }
 
-function doReplyDM(tid, time){
+function doReplyDM(tid, time, other){
     DisableButton(tid, time);
     var user = $('#twets_'+time+' #user_'+tid).val();
     var txt = $('#twets_'+time+' #reply_text_'+tid).val();
     Controller().console.log('Sending Message: '+txt+' to user: '+user);
     $('#twets_'+time+' #new_retweet_'+tid).hide();
     $('#twets_'+time+' #reply_status_'+tid).text(Traduz('sending', '...'));
-    Controller().Chrowety.updateDM(txt, user, tid);
+    Controller().Chrowety.updateDM(txt, user, tid, (other ? time : null));
     BackupReplyCancel(tid, time);
 }
 
@@ -609,7 +652,10 @@ function Reply(tid, status, time){//Mostra o elemento de Reply
      $('#twets_'+time+' #reply_text_'+tid).focus();
      $('#twets_'+time+' #reply_text_'+tid).val(txt);
      Count(tid, time, true);
-     //$('#twets_home');
+
+    $('#twets_'+time+' #botao_'+tid)[0].onclick = function(){
+          doReply(tid, time);
+    };
   });
 }
 
@@ -626,6 +672,7 @@ function ReplyCancel(tid, time){//Esconde o elemento de Reply
 }
 
 function ReplyOK(tid, time){//Esconde o elemento de Reply
+  AtalhoDisabled = false;
   $('#twets_'+time+' #reply_status_'+tid).text(Traduz('ok', '...'));
   $('#twets_'+time+' #reply_'+tid).slideUp(function(){
      $('#twets_'+time+' #reply_text_'+tid).val('');
@@ -633,6 +680,11 @@ function ReplyOK(tid, time){//Esconde o elemento de Reply
      Count(tid, time);
      HideShortLink(tid);
   });
+}
+
+function ReplyFAIL(tid, time, status){//Esconde o elemento de Reply
+  AtalhoDisabled = false;
+  $('#twets_'+time+' #reply_status_'+tid).html('<span style="color:red">'+Traduz(status, '.')+'</span>');
 }
 
 function RetweetOficial(tid, time){//Mostra o elemento do Reply com o Retweet
@@ -646,6 +698,7 @@ function RetweetOficial(tid, time){//Mostra o elemento do Reply com o Retweet
 
 function RetweetEdit(tid, time){
     $('#twets_'+time+' #reply_text_'+tid).removeAttr('disabled');
+    $('#twets_'+time+' #reply_status_'+tid).text('');
     $('#twets_'+time+' #retweet_choice_'+tid).hide();
     $('#twets_'+time+' #reply_rt_'+tid).show();
     var a = $('#twets_'+time+' #reply_text_'+tid).val();
@@ -666,11 +719,22 @@ function RetweetRT(tid, time){//Mostra o elemento do Reply com o Retweet
 }
 
 function RetweetOK(tid, time){
+  AtalhoDisabled = false;
   $('#twets_'+time+' #reply_status_'+tid).text(Traduz('ok', '...'));
   $('#twets_'+time+' #reply_'+tid).slideUp(function(){
      $('#twets_'+time+' #reply_text_'+tid).val('');
-     $('#twets_'+time+' #twets_home');
+     $('#twets_'+time+' #edit_rt_'+tid).show();
+     $('#twets_'+time+' #rt_now_'+tid).removeAttr('disabled');
+     $('#twets_'+time+' #rt_now_'+tid).text(Traduz('retweet_now'));
   });
+}
+
+function RetweetFAIL(tid, time, status){
+  AtalhoDisabled = false;
+  $('#twets_'+time+' #reply_status_'+tid).html('<span style="color:red">'+Traduz(status, '.')+'</span>');
+  $('#twets_'+time+' #edit_rt_'+tid).show();
+  $('#twets_'+time+' #rt_now_'+tid).removeAttr('disabled');
+  $('#twets_'+time+' #rt_now_'+tid).text(Traduz('retweet_now'));
 }
 
 function LoginStatus(t){
@@ -794,16 +858,16 @@ function ShowUserOK(user){
 
     if(!u.protected){
         var data = Controller().TweetData(u.status.created_at);
-        var source = u.status.source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this);"');
+        var source = u.status.source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this, event);"');
         var txt = u.status.text;
-        txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this);">$2</a> ');
+        txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
         txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
         txt = txt.replace(/((https?):\/\/(tweetphoto.com|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
         txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
-        txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this);">$2</a> ');
+        txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this, event);">$2</a> ');
         txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
-        txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this);">$2</a> ');
-        txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this);">$3</a>');
+        txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
+        txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
         $('#user_update').html(txt);
         $('#user_update_data').text(data);
         $('#user_update_data').attr('href', 'http://twitter.com/'+u.screen_name+'/status/'+u.status.id+'');
@@ -868,6 +932,11 @@ function Youtube(id){
     ShowPopup();
 }
 
+function OAuthLogin(){
+    Controller().OAuth.Autorisar();
+    return false;
+}
+
 function Login(){
   var user  = $('#usuario').val();
   var senha = $('#senha').val();
@@ -893,14 +962,26 @@ function Login(){
 }
 
 function init(){
+  var auth = 'oauth';
   if(!Controller().Logado){
-    $('#usuario').val(db.pega('user'));
-    $('#usuario').focus();
-    $('#login').show();
+    if(auth == 'normal'){
+      $('#usuario').val(db.pega('user'));
+      $('#usuario').focus();
+      $('#login').show();
+    }else if(auth == 'oauth'){
+      $('#OAuthLogin').show();
+      if(Controller().OAuth.token.oauth_token){
+        $('#autorize_button').text('Sign in with Twitter');
+        $('#autorize_button').removeAttr('disabled');
+      }else{
+        Controller().OAuth.RequestToken();
+      }
+    }
     LoginUp = true;
     return false;
   }
   document.charset = Controller().language.charset;
+  $('meta')[0].charset = Controller().language.charset;
   Controller().CheckLimit('Popup().LT.Auto()');
 
   LoadProfile();
@@ -944,32 +1025,40 @@ $(document).ready(init);
     </div>
 
     <div class="info dn">
-      <a id="PhotoLink" onclick="Link(this);"><img id="foto" width="32" height="32" src="" class="photo fl"/></a>
+      <a id="PhotoLink" onclick="Link(this, event);"><img id="foto" width="32" height="32" src="" class="photo fl"/></a>
       <span class="fl">
         <span id="user_nome" class="p8"></span> <span class="cinza">(<span id="username" class="p8"></span>)</span> -
         <a class="p8" href="javascript:Controller().Logout();GoLogin();">
           <script>html(Traduz('logout'))</script>
         </a>
         <br />
-        <a id="SeguindoLink" class="cinza p8" onclick="Link(this);"><span id="seguindo"></span></a> | <a id="SeguidoresLink" class="cinza p8" onclick="Link(this);"><span id="seguidores"></span></a>
+        <a id="SeguindoLink" class="cinza p8" onclick="Link(this, event);"><span id="seguindo"></span></a> | <a id="SeguidoresLink" class="cinza p8" onclick="Link(this, event);"><span id="seguidores"></span></a>
       </span>
     </div>
     <button id="bhome" onclick="LT.home();"><script>html(Traduz('home'))</script></button>
     <button id="bmentions" onclick="LT.mentions();"><script>html(Traduz('mentions'))</script></button>
     <button id="bmessages" onclick="LT.messages();"><script>html(Traduz('messages'))</script></button>
     <button id="bfavorites" onclick="LT.favorites();"><script>html(Traduz('favorites'))</script></button>
+
  <!--
+    <button id="blistas" onclick="Controller().Insert('home', 3)">Page</button>
     <button id="bmore" onclick="LT.more();">More</button>
     <button id="blistas" onclick="">Lists</button>
     <button id="bpainel" class="PainelButton fr" onclick="SwichPainel();" disabled="disabled"><img id="PainelSeta" class="dn"/></button>
 -->
-    <button title="Config" class="PainelButton fr" onclick="Link(this,true);"><img src="img/conf.png"/></button>
+    <span class="fr">†</span>
+    <img title="Configuration" class="pointer fr" onclick="Link(this, event, true);" src="img/conf.png"/>
   </div>
-  <div id="submenu_more" class="submenu centro dn">
 
-    <button id="botao_update" onclick="QuickProfile();">Quick profile</button>††
+  <div id="submenu_more" class="submenu centro dn">
+    <button id="botao_profile" onclick="QuickProfile();">Quick profile</button>††
   </div>
+
+  <div class="timeline"><!-- TIMELINE> -->
+
   <div id="twets_update" class="update">
+    <input type="hidden" id="update_type" value="update"/>
+    <input type="hidden" id="dm_user" value=""/>
     <textarea id="reply_text_update" onclick="Update();" onkeydown="Atalho(event, 'update', 'home')" onkeyup="Count('update', 'update')" class="t1"></textarea>
     <div id="update_co2" class="text2 dn">
       <div class="short fl" title="Short a Link">
@@ -981,9 +1070,9 @@ $(document).ready(init);
       <br/><br/>
       <button id="botao_update" onclick="doUpdate()" title="Done (Enter)"><script>html(Traduz('done'))</script></button>††
       <button id="botao_share_update" onclick="SharePage('update', 'update')" title=""><script>html(Traduz('share_page'))</script></button>††
-      <a onclick="UpdateCancel()" title="Cancel" class="p8"><script>html(Traduz('cancel'))</script></a>
+      <a id="botao_update_cancel" onclick="UpdateCancel()" title="Cancel" class="p8"><script>html(Traduz('cancel'))</script></a>
       <span id="count_update" class="p13">140</span>
-      <span id="reply_status_update"></span>
+      <span id="reply_status_update" class="state"></span>
     </div>
   </div>
 
@@ -1032,7 +1121,7 @@ $(document).ready(init);
     </div>
 
     <div id="youtube_preview" class="dn centro">
-        <a id="youtube_link" class="cinza" onclick="Link(this);">
+        <a id="youtube_link" class="cinza" onclick="Link(this, event);">
             <span class="p12 oceania fl"><script>html(Traduz('watch_on_youtube'))</script></span>
         </a>
         <br /><br />
@@ -1046,7 +1135,7 @@ $(document).ready(init);
 
     <div id="twitpic_preview" class="dn centro">
         <br /><br />
-        <a id="twitpic_link" onclick="Link(this);">
+        <a id="twitpic_link" onclick="Link(this, event);">
             <img id="twitpic_photo" class="photo" width="250"/>
         </a>
     </div>
@@ -1057,8 +1146,8 @@ $(document).ready(init);
           <span id="user_data" class="fl">
                <span id="user_protegido" class="cadeado dn" title="Protected">Protegido</span>
                <span id="user_unome" class="p12 oceania"></span><br />
-               <span><a id="user_uname" onclick="Link(this);"></a></span><br />
-               <a class="cinza" onclick="Link(this);" id="user_local_link"><span id="user_local"></span></a><br />
+               <span><a id="user_uname" onclick="Link(this, event);"></a></span><br />
+               <a class="cinza" onclick="Link(this, event);" id="user_local_link"><span id="user_local"></span></a><br />
                <span><script>html(Traduz('member_since'))</script>: <span id="user_since"></span></span><br />
                <span id="user_follow">
                  <script>html(Traduz('following_you',':'))</script>
@@ -1070,7 +1159,7 @@ $(document).ready(init);
         <div id="user_rest">
         <br />
         <div id="user_bio_div" class="cb">
-            <span><a id="user_link" href="" onclick="Link(this)"></a></span><br />
+            <span><a id="user_link" href="" onclick="Link(this, event)"></a></span><br />
             <span id="user_bio"></span>
             <br /><br />
         </div>
@@ -1097,13 +1186,13 @@ $(document).ready(init);
             <br /><br />
             <b><script>html(Traduz('last_update'))</script>: </b>
             <span id="user_update"></span><br />
-            <span class="p8 cinza"><a class="p8 cinza" id="user_update_data" onclick="Link(this);"></a><span id="user_update_via"></span></span>
+            <span class="p8 cinza"><a class="p8 cinza" id="user_update_data" onclick="Link(this, event);"></a><span id="user_update_via"></span></span>
         </div>
         </div>
     </div>
   </div>
 
-
+  </div><!-- <TIMELINE -->
 </div>
 
 <div id="login" class="login dn">
@@ -1128,6 +1217,15 @@ $(document).ready(init);
       <span id="status_login" class="dn"></span>
     </form>
 </div>
+
+<div id="OAuthLogin" style="width:150px;" class="login dn">
+    <form onsubmit="return OAuthLogin();">
+      <br />
+      <button disabled="disabled" id="autorize_button" type="submit"><img id="autorize_image" src="img/load.gif" /></button>
+      <br />
+      <br />
+    </form>
+</div>
+
 </body>
 </html>
-

@@ -8,13 +8,14 @@
 body{
   overflow:hidden;
   color:#555;
+  background-color:#fff;
 }
 ::-webkit-scrollbar {
     width: 10px;
     height: 13px;
 }
 ::-webkit-scrollbar{
-    background-color:#fff;
+    background-color:transparent;
 }
 ::-webkit-scrollbar-button{
     display:none;
@@ -42,7 +43,7 @@ a{
 }
 a:hover{
   text-decoration:underline;
-  -webkit-text-stroke: 0.01em black;
+  /*-webkit-text-stroke: 0.01em black;*/
 }
 a.url{
 
@@ -136,7 +137,7 @@ input[type="password"]{
 }
 
 .init{
-  width:380px;
+  width:385px;
 }
 .login{
   border-radius: 5px;
@@ -372,6 +373,11 @@ button[disabled="disabled"]:hover{
   width:16px;
   height:16px;
 }
+.timeline{
+  border:1px solid #ddd;
+  border-radius:5px;
+  /*background-color:#333;*/
+}
 .twets{
   height:450px;
   width:375px;
@@ -389,9 +395,12 @@ button[disabled="disabled"]:hover{
 .twets .twet,
 .twets .reply,
 .update .twet{
-  background:#ffffff url('../img/w.jpg') no-repeat left bottom;
+  background:transparent url('../img/w.png') no-repeat left bottom;
   padding:10px 0 0 10px;
   -webkit-transition: opacity 350ms linear;
+}
+.twets .mentionado{
+  /*background:transparent url('../img/wm.png') no-repeat left bottom;*/
 }
 .twets .read{
   border-left:2px solid transparent;
@@ -493,8 +502,18 @@ button[disabled="disabled"]:hover{
   opacity:.3;
   cursor:default;
   font-weight: bold;
-  margin-right:35px;
+  margin-right:15px;
 }
+.update  .twet span,
+.update .text2 span{
+  margin-right:15px;
+}
+.twets .reply .state,
+.update .twet .state,
+.update .text2 .state{
+  opacity:.6;
+}
+
 .twets .texwt{
   width:325px;
   display:block;
@@ -536,7 +555,7 @@ button[disabled="disabled"]:hover{
   background-position:-128px 0;
 }
 .rt{
-  background:transparent url(../img/sprite-icons.png') -177px 0;
+  background:transparent url('../img/sprite-icons.png') -177px 0;
   width:15px;
   height:15px;
   text-indent:-99999px;
@@ -571,6 +590,29 @@ button[disabled="disabled"]:hover{
 .rts{
   background-position:-192px 0;
 }
+.arroba,
+.arroba2{
+  background:transparent url('../img/sprite-icons.png') 0px -32px;
+  width:13px;
+  height:13px;
+  text-indent:-999px;
+  display:inline-block;
+}
+.arroba:hover,
+.arroba2{
+  background-position: -16px -32px;
+}
+
+.msg{
+  background:transparent url('../img/sprite-icons.png') -32px -32px;
+  width:15px;
+  height:13px;
+  text-indent:-999px;
+  display:inline-block;
+}
+.msg:hover{
+  background-position: -48px -32px;
+}
 
 /* FIM ICONS */
 @font-face {
@@ -585,7 +627,7 @@ button[disabled="disabled"]:hover{
   -webkit-background-clip: text;
 }
 
-
+.pointer{cursor:pointer}
 .reflect{-webkit-box-reflect:below 0.01em -webkit-gradient(linear, left top, left bottom, from(transparent), color-stop(0.7, transparent), to(white));}
 .vmiddle{vertical-align:middle}
 .vbottom{vertical-align:bottom}

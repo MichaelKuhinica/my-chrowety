@@ -80,8 +80,11 @@ function LoadConfig(){
 
     SelectOption('language', config.language);
     SelectOption('url_shortener', config.url_shortener);
+    SelectOption('alerts', config.alerts);
+    SelectOption('alerts_max', config.alerts_max);
     SelectOption('tweet_font_size', config.tweet_font_size);
     SelectOption('tweet_shadow', config.tweet_shadow);
+    SelectOption('link_in_bg', config.link_in_bg);
     SelectOption('home_tweets_page', config.start_count.home);
     SelectOption('home_refresh_time', config.refresh.home);
     SelectOption('mentions_tweets_page', config.start_count.mentions);
@@ -95,8 +98,11 @@ function LoadConfig(){
 function SaveConfig(){
     config.language             = GetValue('language');
     config.url_shortener        = GetValue('url_shortener');
+    config.alerts               = GetValue('alerts');
+    config.alerts_max           = GetValue('alerts_max');
     config.tweet_font_size      = GetValue('tweet_font_size');
     config.tweet_shadow         = GetValue('tweet_shadow');
+    config.link_in_bg           = GetValue('link_in_bg');
     config.start_count.home     = GetValue('home_tweets_page');
     config.refresh.home         = GetValue('home_refresh_time');
     config.start_count.mentions = GetValue('mentions_tweets_page');
@@ -150,8 +156,10 @@ $(document).ready(init);
               <select id="home_refresh_time">
                 <option value="3">3 <script>html(Traduz('minutes'))</script></option>
                 <option value="5">5 <script>html(Traduz('minutes'))</script></option>
-                <option value="7">7 <script>html(Traduz('minutes'))</script></option>
+                <option value="8">8 <script>html(Traduz('minutes'))</script></option>
                 <option value="10">10 <script>html(Traduz('minutes'))</script></option>
+                <option value="15">15 <script>html(Traduz('minutes'))</script></option>
+                <option value="20">20 <script>html(Traduz('minutes'))</script></option>
               </select>
             </label>
 
@@ -170,6 +178,7 @@ $(document).ready(init);
                     
             <label><script>html(Traduz('refresh_time'))</script>
               <select id="mentions_refresh_time">
+                <option value="3">3 <script>html(Traduz('minutes'))</script></option>
                 <option value="5">5 <script>html(Traduz('minutes'))</script></option>
                 <option value="8">8 <script>html(Traduz('minutes'))</script></option>
                 <option value="10">10 <script>html(Traduz('minutes'))</script></option>
@@ -203,7 +212,48 @@ $(document).ready(init);
                 <option value="40">40 <script>html(Traduz('minutes'))</script></option>
               </select>
             </label>
+            <br /><br />
+            <label><script>html(Traduz('url_shortener'))</script>
+              <select id="url_shortener">
+                <option value="3.ly">3.ly</option>
+                <option value="migre.me">migre.me</option>
+                <option value="goo.gl">goo.gl</option>
+                <option value="bit.ly">bit.ly</option>
+                <option value="j.mp">j.mp</option>
+                <option value="is.gd">is.gd</option>
+               <!-- <option value="tr.im">tr.im</option> -->
+              </select>
+            </label>
+            <br /><br />
+            <label><script>html(Traduz('alerts'))</script>
+              <select id="alerts">
+                <option value="true"><script>html(Traduz('yes'))</script></option>
+                <option value="false"><script>html(Traduz('no'))</script></option>
+              </select>
+            </label>
+            <br /><br />
+            <label><script>html(Traduz('max_tweets_per_alerts'))</script>
+              <select id="alerts_max">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
+            </label>
 
+            <br /><br />
+            <label><script>html(Traduz('open_links_in_background'))</script>
+              <select id="link_in_bg">
+                <option value="true"><script>html(Traduz('yes'))</script></option>
+                <option value="false"><script>html(Traduz('no'))</script></option>
+              </select>
+            </label>    
 <!--
             <br /><br />
             <span class="stit"><script>html(Traduz('favorites'))</script>:</span>
@@ -247,22 +297,12 @@ $(document).ready(init);
                 <option value="en">English</option>
                 <option value="pt-br">Português (Brasil)</option>
                 <option value="es">Spanish</option>
+                <option value="de">German</option>
                 <!--<option value="cn">Chinese</option>-->
               </select>
             </label> (<script>html(Traduz('restart_required'))</script>)
             <br /><br />
-            <label><script>html(Traduz('url_shortener'))</script>
-              <select id="url_shortener">
-                <option value="3.ly">3.ly</option>
-                <option value="migre.me">migre.me</option>
-                <option value="bit.ly">bit.ly</option>
-                <option value="j.mp">j.mp</option>
-                <option value="is.gd">is.gd</option>
-               <!-- <option value="tr.im">tr.im</option> -->
-              </select>
-            </label>
-            <br /><br />
-            <label>Tweet font-size
+            <label><script>html(Traduz('tweet_font_size'))</script>
               <select id="tweet_font_size">
                 <option value="5pt">5pt</option>
                 <option value="6pt">6pt</option>
@@ -282,16 +322,19 @@ $(document).ready(init);
               </select>
             </label>
             <br /><br />
-            <label>Text shadow
+            <label><script>html(Traduz('text_shadow'))</script>
               <select id="tweet_shadow">
                 <option value="1px 1px 1px #ccc"><script>html(Traduz('yes'))</script></option>
                 <option value="false"><script>html(Traduz('no'))</script></option>
               </select>
             </label>
+
             <br /><br />
-            <label>Twitter Question
+            <label><script>html(Traduz('twitter_question'))</script>
               <input id="twitter_question" type="text" value="" size="24" />
             </label> <a title="" class="p8" onclick="ResetSlogan()"><script>html(Traduz('reset2'))</script></a>
+
+
             <br /><br />
            </div>
         </fieldset>

@@ -80,10 +80,10 @@ body{
   border-radius:7px;
   border:1px solid #aaa;
   border-right:none;
-  background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#eee), to(#fff));
+  /*background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#eee), to(#fff));*/
 }
 .config .con label input[type="text"]{
-  margin-top:-10px; 
+  margin-top:-10px;
   height:25px;
   border-radius:7px;
   border:1px solid #aaa;

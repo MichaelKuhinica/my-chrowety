@@ -1,6 +1,5 @@
 if(window.localStorage){
-  console.log("db Local Storage started sucessfully.");
-  console.log("db Local Storage iniciado com êxito.");
+  //console.log("LocalStorage iniciado.");
 
   var db = {
       salva:function(nome,valor){
@@ -17,6 +16,5 @@ if(window.localStorage){
       }
   };
 }else{
-  console.log("No suport for Local Storage.");
-  console.log("Sem suporte ao Local Storage.");
+  //console.log("Sem suporte ao LocalStorage.");
 }

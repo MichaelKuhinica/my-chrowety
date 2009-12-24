@@ -8,18 +8,16 @@
         "path": "popup.html"
      }
    },
+   "content_scripts": [
+    {
+    "js": ["js/oauth.js"],
+    "matches": ["https://twitter.com/oauth/authorize"]
+    }
+   ],
    "permissions": [
      "tabs",
-     "http://twitter.com/",
-     "https://twitter.com/",
-     "http://3.ly/*",
-     "http://migre.me/*",
-     "http://api.bit.ly/*",
-     "http://api.j.mp/*",
-     "http://is.gd/*",
-     "http://api.tr.im/*",
-     "http://*.tr.im/*",
-     "http://untr.im/*"
+     "http://*/*",
+     "https://*/*"
    ],
    "icons": {
      "16": "icones/x16.png",
@@ -29,6 +27,6 @@
    },
    "name": "Chrowety",
    "description": "A twitter client for Google Chrome",
-   "version": "1.6.101",
+   "version": "1.6.3.2",
    "update_url": "http://clients2.google.com/service/update2/crx"
 }

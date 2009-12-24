@@ -1,14 +1,136 @@
-<!DOCTYPE html>
 <html>
 <head>
 <meta charset="">
 <script type="text/javascript" src="js/jquery.js"></script>
 <script type="text/javascript" src="js/db.js"></script>
-<script type="text/javascript" src="" id="language" charset="iso-8859-1"></script>
+<script type="text/javascript" src="js/oauthsimple.min.js"></script>
+<script type="text/javascript" id="language"></script>
 <script type="text/javascript">
 var Popup = function(){return chrome.experimental.extension.getPopupView();}
-var m = function(i){return i+'0000'}
+var m = function(i){return Math.floor(i*60000)};
+
+var OAuth = {
+    consumer:{
+      key: 'eWGZ2e24PmM301P1i0f6bQ',
+      secret: '4zwn3jgT4To5Hl6i4fPGkB3mBqkP3Sif5rTVKLPuqg'
+    },
+    token:{},
+    tab:null,
+
+    Sign:function(url, dados, method){
+        var sig = {
+            consumer_key: OAuth.consumer.key,
+            shared_secret: OAuth.consumer.secret
+        };
+        if(OAuth.token.oauth_token){
+            sig.oauth_token = OAuth.token.oauth_token;
+            sig.oauth_secret = OAuth.token.oauth_token_secret;
+        }
+        //console.log(sig);
+        return OAuthSimple().sign({
+            path: url,
+            action: method ? method : 'GET',
+            parameters: dados ? dados : {},
+            signatures:  sig
+        });
+    },
+
+    RequestToken:function(out){
+        var Tok = new Request(OAuth.Sign(api.request_token).signed_url , 'get', 'text');
+        //var Tok = new Request(api.request_token, 'get', 'text');
+            Tok.sucesso = function(e){
+                var args = e.split("&");
+                for(i in args) {
+                  args[i] = args[i].split("=");
+                  OAuth.token[args[i][0]] = args[i][1];
+                }
+                try{Popup().init()}
+                catch(e){}
+            };
+            Tok.init();
+    },
+
+    Autorisar:function(){
+        var pag = api.autorize+'?oauth_token='+OAuth.token.oauth_token;
+        chrome.tabs.create({
+            url: pag,
+            selected: true
+        }, function(tab){
+            OAuth.tab = tab.id;
+        });
+    },
+
+    Access:function(){
+        var Acs = new Request(api.access_token, 'get', 'text');
+            Acs.dados = {oauth_verifier: OAuth.pin};
+            Acs.sucesso = function(e){
+                var args = e.split("&");
+                for(i in args) {
+                  args[i] = args[i].split("=");
+                  OAuth.token[args[i][0]] = args[i][1];
+                }
+                OAuthAutoLogin();
+            };
+            Acs.initOAuth();
+    },
+
+    ParseString:function(str){
+        return OAuthSimple()._parseParameterString(str);
+    },
+
+    SalvaToken:function(){
+        db.salva('token', J2S(OAuth.token));
+    },
+    LoadToken:function(){
+        OAuth.token = S2J(db.pega('token'));
+    },
+    DeletaToken:function(callback){
+        db.deleta('token');
+        OAuth.token = {};
+
+        if(callback){
+            try{
+              eval(callback);
+            }catch(e){}
+        }
+    },
+
+};
+
+function Request(url, met, type, ctype){
+        this.url = url;
+        this.met = met;
+        this.type = type ? type : "json";
+        this.dados = {};
+        this.sucesso = null;
+        this.erro = null;
+        this.contentType = ctype ? ctype : "application/x-www-form-urlencoded",
+
+        this.initOAuth = function(){
+            this.url = OAuth.Sign(this.url, this.dados, this.met).signed_url;
+            this.dados = {};
+            this.init(true);
+        };
+
+        this.init = function(_OAuth){
+          $.ajax({
+                url: this.url,
+                type: this.met,
+                data: this.dados,
+                dataType: this.type,
+                contentType: this.contentType,
+                success: this.sucesso,
+                error: this.erro,
+             }
+          );
+        };
+}
+
 var api = {
+    access_token: 'https://twitter.com/oauth/access_token',
+    request_token: 'https://twitter.com/oauth/request_token',
+    autorize: 'https://twitter.com/oauth/authorize',
+
     login:'https://twitter.com/account/verify_credentials.json',
     logout:'https://twitter.com/account/end_session.json',
     rate:'https://twitter.com/account/rate_limit_status.json',
@@ -25,6 +147,7 @@ var api = {
     favorite:function(id){return 'https://twitter.com/favorites/create/'+id+'.json'},
     unfavorite:function(id){return 'https://twitter.com/favorites/destroy/'+id+'.json'},
 
+    googl:'http://goo.gl/api/url',
     threely:'http://3.ly/',
     twitpic:'http://twitpic.com/show/',
     tweetphoto_view:'http://TweetPhotoAPI.com/api/TPAPI.svc/imagefromurl',
@@ -47,29 +170,7 @@ var time = {
     home3:null
 };
 
-var Logado=false,_iniciou,toush,total=0,new_count=0,new_tcount=0,OldCount=0,api_limit = null,api_checked=false,aid,oid,taid;
-
-function Request(url, met, type, ctype){
-    this.url = url;
-    this.met = met;
-    this.type = type ? type : "json";
-    this.dados = null;
-    this.sucesso = null;
-    this.erro = null;
-    this.contentType = ctype ? ctype : "application/x-www-form-urlencoded",
-    this.init = function(){
-      $.ajax({
-            url: this.url,
-            type: this.met,
-            data: this.dados,
-            dataType: this.type,
-            contentType: this.contentType,
-            success: this.sucesso,
-            error: this.erro,
-         }
-      );
-    }
-}
+var Logado=false,AuthMode,_iniciou,total=0,new_count=0,api_limit = null,api_checked=false,aid,oid,taid;
 
 function SinceDate(TD){
     var a = new Date(TD);
@@ -91,22 +192,22 @@ function TweetData(TD) {
   } else if(Calc < 60 * 60) {
           var Min = parseInt(Calc / 60);
           var s = Traduz('minute_ago').replace('%s', Min);
-              s = s.replace('&', ((Min > 1) ? "s" : ""));
+              s = s.replace('& ', ((Min > 1) ? language.plural_word+' ' : ""));
           return s;
   } else if(Calc < 60 * 60 * 24) {
           var Hor = parseInt(Calc / (60 * 60));
           var s = Traduz('about_hour_ago').replace('%s', Hor);
-              s = s.replace('&', ((Hor > 1) ? "s" : ""));
+              s = s.replace('& ', ((Hor > 1) ? language.plural_word+' ' : ""));
           return s;
   } else if(Calc < 60 * 60 * 24 * 30) {
           var Day = parseInt(Calc / (60 * 60 * 24));
           var s = Traduz('about_day_ago').replace('%s', Day);
-              s = s.replace('&', ((Day > 1) ? "s" : ""));
+              s = s.replace('& ', ((Day > 1) ? language.plural_word+' ' : ""));
           return s;
   } else if(Calc < 60 * 60 * 24 * 30 * 12) {
           var Month = parseInt(Calc / (60 * 60 * 24 * 30));
           var s = Traduz('about_month_ago').replace('%s', Month);
-              s = s.replace('&', ((Month > 1) ? "es" : ""));
+              s = s.replace('& ', ((Month > 1) ? "e"+language.plural_word+' ' : ""));
           return s;
   } else {
           return Traduz('years_ago');
@@ -147,6 +248,7 @@ var tws = {
 function LoadLang(){
     var lg = config.language;
     $('#language').attr('src', 'lang/'+lg+'.js');
+    console.log('LoadLang() > '+lg);
 }
 
 function Traduz(s, e){
@@ -154,27 +256,27 @@ function Traduz(s, e){
 }
 
 function LoadConfig(){
-    console.log('LoadConfig()');
-
-    if(!db.pega('version')){
+    if(!db.pega('version'))
+    {
         db.deleta('config');
         db.salva('version', Chrowety.version());
     }
-    else if(db.pega('version') != Chrowety.version()){
-        //db.limpa();
-        //db.deleta('lembra');
-        //db.deleta('z_z');
-        db.deleta('config');
+    else if(db.pega('version') != Chrowety.version())
+    {
+        try{
+          db.deleta('z_z');
+        }catch(e){console.log(e)}
+        //db.deleta('config');
         db.salva('version', Chrowety.version());
     }
 
-    if(db.pega('config') && db.pega('config') != null && typeof S2J(db.pega('config')) == "object"){
+    if(db.pega('config') && db.pega('config') != null && typeof S2J(db.pega('config')) == "object")
+    {
         console.log('LoadConfig() > Definida');
         config = S2J(db.pega('config'));
         console.log(config);
-    }else{
-        //var a = J2S(DefaultConfig);
-        //config = S2J(a);
+    }else
+    {
         console.log('LoadConfig() > Padr„o');
         config = DefaultConfig;
     }
@@ -183,8 +285,8 @@ function LoadConfig(){
 }
 
 function ReLoadConfig(){
-    //Chrowety.logout(true);
-    var _NAME_ = new Array('home', 'mentions', 'messages');
+
+    var _NAME_ = new Array('home', 'mentions', 'messages', 'favorites');
     for(n in  _NAME_){
       try{
         window.clearInterval(time[_NAME_[n]]);
@@ -197,18 +299,18 @@ function ReLoadConfig(){
         time[_NAME_[n]] = setInterval('Chrowety.'+_NAME_[n]+'.Since()', m(config.refresh[_NAME_[n]]));
       }catch(e){console.log(e)}
     }
-    //window.clearInterval(time.home);
-    //time.home = setInterval('Chrowety.home.Since()', m(config.refresh.home));
-    //init();
 }
 
 var config = {};
 var DefaultConfig = {
     language: 'en',
-    url_shortener: '3.ly',
+    url_shortener: 'goo.gl',
     tweet_font_size: '10pt',
     tweet_shadow: "false",
     twitter_question: false,
+    link_in_bg: "false",
+    alerts: "true",
+    alerts_max:5,
     start_count:{
       home:10,
       mentions:10,
@@ -222,8 +324,8 @@ var DefaultConfig = {
       favorites:20,
     },
     refresh:{
-      home:5,
-      mentions:8,
+      home:3,
+      mentions:5,
       messages:10,
       favorites:60,
       limit_check:3,
@@ -269,11 +371,19 @@ function Sortear(ob, campo, reverso){
 
 
 
-function CacheTweets(){
+function SaveCache(){
     var user     = db.pega('user');
-
+    var _NAME_ = new Array('home', 'mentions', 'messages', 'favorites');
+    for(n in  _NAME_){
+      try{
+        tws[_NAME_[n]].ultimo         = Chrowety[_NAME_[n]].ultimo
+        tws[_NAME_[n]].primeiro       = Chrowety[_NAME_[n]].primeiro
+        tws[_NAME_[n]].primeiro_lista = Chrowety[_NAME_[n]].primeiro_lista
+        tws[_NAME_[n]].mostrando      = Chrowety[_NAME_[n]].mostrando
+      }catch(e){console.log(e)}
+    }
     var _tws     = J2S(tws);
-
+    console.log(tws)
     db.salva(user+'_TwCache', true);
     db.salva(user+'_tws', _tws);
 }
@@ -282,17 +392,12 @@ function CalculaApiRequests(){
     var a = config.refresh;
     var calc = (60/a.home) + (60/a.mentions) + (60/a.messages) + (60/a.favorites);
     calc = ((calc) + 4).toFixed();
-    /*
-    var a = config.refresh;
-    var calc = (60/a.home) + (60/a.mentions) + (60/a.messages) + (60/a.favorites);
-    calc = ((calc * 100) + 4).toFixed();
-    */
     perc = ((calc / 150) * 100).toFixed();
     return {numero: calc, porcento: perc};
 }
 
 function RateLimit(func){
-  $.get(api.rate, null, function(json){
+  $.get(OAuth.Sign(api.rate).signed_url, null, function(json){
     api_limit = json.remaining_hits;
     db.salva('api_limit', json.remaining_hits);
     db.salva('api_reset_time', json.reset_time);
@@ -336,12 +441,6 @@ function SalvaProfile(json){
   db.salva('favoritos', json.favourites_count);
 }
 
-// ******
-/*
-function ShowMore(tm){
-  Chrowety[tm].Max();
-}
-*/
 
 function ContaTweets(tm){
     var i=0;
@@ -397,12 +496,21 @@ var fec = {
         return ob.html;
     },
 
-    html:function(tm, cf){
+    last:function(tm, n, max){
+        var re = '';
+        for(i=0;i<n;i++){
+            if(i>=max)break;
+            re += LayoutPage(Sortear(tws[tm].tweets, 'id', true)[i], tm);
+        }
+        return re;
+    },
+
+    html:function(tm, cf, count){
         var i = 0;
         var re='';
         var ob = Sortear(tws[tm].tweets, 'id', true);
         //var total = Chrowety[tm].mostrando ? Chrowety[tm].mostrando : config.start_count[tm];
-        var total = config.start_count[tm];
+        var total = count ? count : config.start_count[tm];
         var ia = 0;
         for(id in ob){
           if(cf && cf.max){
@@ -464,29 +572,43 @@ var Chrowety = {
     // @lembra
     // @login
     login:function(lembra, login){
-      console.log('Chrowety.login()');
       var Login = new Request(api.login, 'get');
           Login.sucesso = function(json){
-              db.salva('z_z', login);
-              CheckLimit('Chrowety.Run()');
-              console.log('Logado...');
-              Logado = true;
+              if(AuthMode == "OAuth"){
+                  console.log('Chrowety.login() '+AuthMode);
+                  db.salva('profile_view', J2S({}));
+                  db.salva('logado', true);
+                  db.salva('AuthMode', 'OAuth');
+                  db.salva('version', Chrowety.version());
+                  OAuth.SalvaToken();
+                  SalvaProfile(json);
+                  CheckLimit('Chrowety.Run()');
+              }else{
+                  console.log('Chrowety.login() '+AuthMode);
+                  db.salva('z_z', login);
+                  console.log('Logado...');
+                  Logado = true;
+                  AuthMode = 'API';
+                  db.salva('profile_view', J2S({}));
+                  db.salva('lembra', lembra);
+                  db.salva('version', Chrowety.version());
+                  SalvaProfile(json);
+                  CheckLimit('Chrowety.Run()');
+                  Popup().LoginStatus(Traduz('sucess_login'));
+                  Popup().init();
+                  console.log('Chrowety.login() > OK');
+              }
 
-              db.salva('profile_view', J2S({}));
-              db.salva('lembra', lembra);
-              db.salva('modo_retweet', 'normal');
-              db.salva('version', Chrowety.version());
-
-              SalvaProfile(json);
-              Popup().LoginStatus(Traduz('sucess_login'));
-              Popup().init();
-              console.log('Chrowety.login() > OK');
           };
           Login.erro = function(){
-              Popup().LoginStatus(Traduz('login_failed', '...'));
-              console.log('Chrowety.login() > FAIL');
-          }
-          Login.init();
+              if(AuthMode == "OAuth"){
+
+              }else{
+                Popup().LoginStatus(Traduz('login_failed', '...'));
+                console.log('Chrowety.login() > FAIL');
+              }
+          };
+          Login.initOAuth();
     },
 
     logout:function(lembra){
@@ -495,8 +617,6 @@ var Chrowety = {
       console.log('Chrowety.logout()');
       var bak_conf = db.pega('config');
       var bak_users = db.pega('profile_view');
-      console.log('backup config');
-      console.log(bak_conf);
       db.limpa();
       window.clearInterval(time.limit);
       window.clearInterval(time.home);
@@ -506,15 +626,19 @@ var Chrowety = {
       if(bak_conf != null){db.salva('config', bak_conf)}
       db.salva('profile_view', bak_users);
       Logado = false;
-      jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+db.pega('z_z'))}});
-      var Logout = new Request(api.logout, 'post');
-          Logout.sucesso = function(){
-            console.log('Chrowety.logout() > OK');
-          };
-          Logout.erro = function(){
-                console.log('Chrowety.logout() > FAIL');
-          };
-          Logout.init();
+      if(AuthMode == "OAuth"){
+        OAuth.DeletaToken('OAuth.RequestToken(true)');
+      }else{
+        jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+db.pega('z_z'))}});
+        var Logout = new Request(api.logout, 'post');
+            Logout.sucesso = function(){
+              console.log('Chrowety.logout() > OK');
+            };
+            Logout.erro = function(){
+                  console.log('Chrowety.logout() > FAIL');
+            };
+            Logout.initOAuth();
+      }
     },
 
     // Atualiza informaÁıes do perfil
@@ -528,7 +652,7 @@ var Chrowety = {
           Profile.erro = function(){
             console.log('Chrowety.profile() > FAIL');
           };
-          Profile.init();
+          Profile.initOAuth();
     },
 
     user:function(uname){
@@ -554,7 +678,7 @@ var Chrowety = {
             console.log('Chrowety.user() > FAIL');
             Popup().ShowUserERRO();
           };
-          User.init();
+          User.initOAuth();
     },
 
     /*
@@ -565,7 +689,7 @@ var Chrowety = {
     update:function(s, reply_tid, tm){
       var src = 'chrowety';//'blu';//'friendfeed';//'twidroid';//'tweetdeck';//'seesmicdesktop';//
       var Up = new Request(api.update, 'post');
-          Up.dados = reply_tid ? {status: s, source: src, in_reply_to_status_id: reply_tid} : {status: s, source: src};
+          Up.dados = reply_tid ? {status: s, in_reply_to_status_id: reply_tid} : {status: s};
           Up.sucesso = function(w){
             console.log('Tweet send: '+s);
             ht = Layout(w, tm);
@@ -583,21 +707,25 @@ var Chrowety = {
             db.salva('profile_view', J2S(U));
             Chrowety.home.ultimo = w.id;
            //ContaTweets(tm);
+            console.log('Chrowety.update() > OK');
                 if(reply_tid){
                     Popup().ReplyOK(reply_tid, tm);
-                    console.log('Return ReplyOK');
                 }else{
                     Popup().UpdateOK(ht, tm);
-                    console.log('Return UpdateOK');
                 }
           };
           Up.erro = function(){
                 console.log('Chrowety.update() > FAIL');
+                if(reply_tid){
+                    Popup().ReplyFAIL(reply_tid, tm, "error");
+                }else{
+                    Popup().UpdateFAIL(reply_tid, tm, "error");
+                }
           };
-          Up.init();
+          Up.initOAuth();
     },
 
-    updateDM:function(s, user, tid){
+    updateDM:function(s, user, tid, tm){
       var _NAME_ = 'messages';
       var Up = new Request(api.updateDM, 'post');
           Up.dados = {screen_name: user, text: s};
@@ -610,13 +738,20 @@ var Chrowety = {
             tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
             Chrowety[_NAME_].ultimo = w.id;
 */
-            Popup().ReplyDMOK(tid, _NAME_);
+            Popup().ReplyDMOK(tid, (tm ? tm : _NAME_));
             console.log('Chrowety.updateDM() > OK');
           };
-          Up.erro = function(){
+          Up.erro = function(e){
                 console.log('Chrowety.updateDM() > FAIL');
+                var status = e.statusText;
+                if(status = "Forbidden"){
+                    Popup().ReplyDMFAIL(tid, tm, "forbidden");
+                    console.log("You cannot send a direct message to "+user+" because they are not following you.");
+                }else{
+                    Popup().ReplyDMFAIL(tid, tm, "error");
+                }
           };
-          Up.init();
+          Up.initOAuth();
     },
 
 
@@ -625,12 +760,19 @@ var Chrowety = {
           del.sucesso = function(){
             //delete tws.home.tweets[tid];
             fec.ByTid(time, tid, true);
+            var _NAME_ = new Array('home', 'mentions');
+            for(n in  _NAME_){
+              try{
+                fec.ByTid(_NAME_[n], tid, true);
+              }catch(e){console.log(e)}
+            }
+
             console.log('Chrowety.deleta() > OK');
           };
           del.erro = function(){
                 console.log('Chrowety.deleta() > FAIL');
           };
-          del.init();
+          del.initOAuth();
     },
 
     retweet:function(tid, time){
@@ -639,10 +781,16 @@ var Chrowety = {
             console.log('Retweet send: '+tid);
             Popup().RetweetOK(tid, time);
           };
-          rt.erro = function(){
-                console.log('Chrowety.retweet() > FAIL');
+          rt.erro = function(e){
+            var status = e.statusText;
+            if(status = "Forbidden"){
+                Popup().RetweetFAIL(tid, time, "forbidden");
+            }else{
+                Popup().RetweetFAIL(tid, time, "error");
+            }
+            console.log('Chrowety.retweet() > FAIL');
           };
-          rt.init();
+          rt.initOAuth();
     },
 
     fav_active:false,
@@ -662,7 +810,7 @@ var Chrowety = {
           fav.erro = function(){
                 console.log('Chrowety.favorite() > FAIL');
           };
-          fav.init();
+          fav.initOAuth();
     },
 
     unfav_active:false,
@@ -674,6 +822,8 @@ var Chrowety = {
             fec.ByTid(time, tid).favorited = false;
             try{
                 fec.ByTid('favorites', tid, true);
+                fec.ByTid('home', tid).favorited = false;
+                fec.ByTid('mentions', tid).favorited = false;
             }catch(e){}
             Popup().FavOK(tid, false, time);
             Chrowety.unfav_active = false;
@@ -681,7 +831,7 @@ var Chrowety = {
           fav.erro = function(){
                 console.log('Chrowety.unfavorite() > FAIL');
           };
-          fav.init();
+          fav.initOAuth();
     },
 
     Clean:function(){
@@ -729,6 +879,7 @@ var Chrowety = {
             if(tws[_NAME_].new_count > 0){
                 var c = tws[_NAME_].new_count;
                 chrome.browserAction.setBadgeText({text:''+c});
+                Alerts(_NAME_, tws[_NAME_].new_count);
                 try{
                   Popup().RefreshResult(c, _NAME_);
                 }catch(e){}
@@ -775,11 +926,12 @@ var Chrowety = {
                 Run.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
                 };
-                Run.init();
+                Run.initOAuth();
         },
         Since:function(since){ // Rate Limited
             var _NAME_ = 'home';
             if(!api_limit){return false}
+            clearInterval(time[_NAME_])
             console.log('Chrowety.'+_NAME_+'.Since()');
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
@@ -809,6 +961,7 @@ var Chrowety = {
                                 db.salva('profile_view', J2S(U));
                                 novs = n;
                               });
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               console.log('Since++ '+novs);
                               Chrowety[_NAME_].ultimo = taid;
                               console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
@@ -816,8 +969,9 @@ var Chrowety = {
                 };
                 Since.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                 };
-                Since.init();
+                Since.initOAuth();
         },
         Max:function(max){ // Rate Limited
             var _NAME_ = 'home';
@@ -859,7 +1013,7 @@ var Chrowety = {
                 Max.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
                 };
-                Max.init();
+                Max.initOAuth();
             }else{
                 console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Cache');
                 Popup().ShowMoreOK(re, _NAME_);
@@ -884,6 +1038,7 @@ var Chrowety = {
                 var c = tws[_NAME_].new_count;
                 var d = tws[_NAME_].new_count+c;
                 chrome.browserAction.setBadgeText({text:''+c});
+                Alerts(_NAME_, tws[_NAME_].new_count);
                 try{
                   Popup().RefreshResult(d, _NAME_);
                 }catch(e){}
@@ -922,11 +1077,12 @@ var Chrowety = {
                 Run.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
                 };
-                Run.init();
+                Run.initOAuth();
         },
         Since:function(since){ // Rate Limited
             var _NAME_ = 'mentions';
             if(!api_limit){return false}
+            clearInterval(time[_NAME_])
             console.log('Chrowety.'+_NAME_+'.Since()');
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
@@ -956,6 +1112,7 @@ var Chrowety = {
                                 db.salva('profile_view', J2S(U));
                                 novs = n;
                               });
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               console.log('Since++ '+novs);
                               Chrowety[_NAME_].ultimo = taid;
                               console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
@@ -963,8 +1120,9 @@ var Chrowety = {
                 };
                 Since.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                 };
-                Since.init();
+                Since.initOAuth();
         },
         Max:function(max){ // Rate Limited
             var _NAME_ = 'mentions';
@@ -997,7 +1155,7 @@ var Chrowety = {
                 Max.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
                 };
-                Max.init();
+                Max.initOAuth();
             }else{
                 console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Cache');
                 Popup().ShowMoreOK(re, _NAME_);
@@ -1023,6 +1181,7 @@ var Chrowety = {
                 var c = tws[_NAME_].new_count;
                 var d = tws[_NAME_].new_count+c;
                 chrome.browserAction.setBadgeText({text:''+c});
+                Alerts(_NAME_, tws[_NAME_].new_count);
                 try{
                   Popup().RefreshResult(d, 'home');
                 }catch(e){}
@@ -1061,11 +1220,12 @@ var Chrowety = {
                 Run.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
                 };
-                Run.init();
+                Run.initOAuth();
         },
         Since:function(since){// Rate Limited
             var _NAME_ = 'messages';
             if(!api_limit){return false}
+            clearInterval(time[_NAME_])
             console.log('Chrowety.'+_NAME_+'.Since()');
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
@@ -1095,6 +1255,7 @@ var Chrowety = {
                                 db.salva('profile_view', J2S(U));
                                 novs = n;
                               });
+                              time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               console.log('Since++ '+novs);
                               Chrowety[_NAME_].ultimo = taid;
                               //console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
@@ -1102,8 +1263,9 @@ var Chrowety = {
                 };
                 Since.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                 };
-                Since.init();
+                Since.initOAuth();
         },
         Max:function(max){// Rate Limited
             var _NAME_ = 'messages';
@@ -1136,7 +1298,7 @@ var Chrowety = {
                 Max.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
                 };
-                Max.init();
+                Max.initOAuth();
             }else{
                 console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Cache');
                 Popup().ShowMoreOK(re, _NAME_);
@@ -1206,8 +1368,10 @@ var Chrowety = {
                 };
                 Run.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
+                    clearInterval(time[_NAME_]);
+                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Run()', m(config.refresh[_NAME_]));
                 };
-                Run.init();
+                Run.initOAuth();
         },
 
         Max:function(pag){// Rate Limited
@@ -1235,7 +1399,7 @@ var Chrowety = {
                 Max.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
                 };
-                Max.init();
+                Max.initOAuth();
         },
 
     },
@@ -1260,7 +1424,7 @@ function LayoutMessage(w, time){
   //Links de Usuarios
   //txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" onclick="ShowUser(\'$2\')">$2</a>');
   //Links de Tags
-  //txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this);">$3</a>');
+  //txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
 
   r =
   '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
@@ -1311,11 +1475,156 @@ function Layout(w, time){
 
   read = w.read ? 'read' : 'unread';
 
-  var in_reply = w.in_reply_to_status_id ? '<a class="cinza p8" href="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" onclick="Link(this);" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
+  var in_reply = w.in_reply_to_status_id ? '<a class="cinza p8" href="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" onclick="Link(this, event);" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
   var Retweeted = '';
-  var RT  = db.pega('modo_retweet') == 'normal' ?
-  '<a onclick="Retweet('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>' :
-  '<a onclick="RetweetOficial('+tid+');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+  var RT  = '<a onclick="Retweet('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+  //var RT = '<a onclick="RetweetOficial('+tid+');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+
+  if(w.user.protected){
+    txt = '<span class="cadeado" title="Protected"></span> '+txt;
+  }
+
+  var Mentionado = (txt.indexOf(db.pega('user')) != -1) ? "mentionado" : "";
+
+
+  if(w.retweeted_status){
+    rt_user = w.user.screen_name;
+    user = w.retweeted_status.user.screen_name;
+    nome = w.retweeted_status.user.name;
+    txt = w.retweeted_status.text;
+    foto = w.retweeted_status.user.profile_image_url;
+    data = w.retweeted_status.created_at;
+    source = w.retweeted_status.source;
+    tid = w.retweeted_status.id;
+    in_reply = w.retweeted_status.in_reply_to_status_id ?
+    '<a class="cinza p8" href="http://twitter.com/'+w.retweeted_status.in_reply_to_screen_name+'/status/'+w.retweeted_status.in_reply_to_status_id+'" onclick="Link(this, event);" title="'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'</a>'
+    : '';
+    if(w.user.protected){
+      txt = '<span class="cadeado" title="Protected"></span> '+txt;
+    }
+    txt = '<span class="rts" title="'+Traduz('retweeted_by')+' '+rt_user+'">Retweeted</span> <a class="reter" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a> '+txt;
+    Retweeted = '<br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')">'+rt_user+'</a>';
+    Retweeted += ' <span class="opts2">(<span class="cinza p8 tweetdata" data="'+w.created_at+'"></span>)</span>';
+    RT = '<a onclick="RetweetRT('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+  }
+
+
+  RT = db.pega('user') == user ? '' : RT;
+
+  var fav = w.favorited ? '<a id="tweet_fav_'+tid+'" class="star" fav="true" onclick="UnFavorite('+tid+', \''+time+'\')" title="'+Traduz('unfavorite')+'">'+Traduz('unfavorite')+'</a><img id="tweet_ifav_'+tid+'" src="" class="dn" />' :
+                      '<a id="tweet_fav_'+tid+'" class="star opts" onclick="Favorite('+tid+', \''+time+'\')" title="'+Traduz('favorite')+'">'+Traduz('favorite')+'</a><img id="tweet_ifav_'+tid+'" src="" class="dn" />';
+
+  var dm = db.pega('user') == user ? '' : '<a class="msg opts" onclick="ReplyDM('+tid+', \''+time+'\', true)" title="DM '+Traduz('to')+' '+user+'">'+Traduz('messages')+'</a>';
+
+  var del = db.pega('user') == user ? '<a onclick="Deleta('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' : '';
+
+  // Links Normais
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
+
+  //Twitpic
+  txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
+
+  //Tweetphoto | Pic.gd
+  txt = txt.replace(/((https?):\/\/(tweetphoto.com\/|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
+
+  //YouTube http://www.youtube.com/watch?v=sG5lpGdNd5E
+  txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
+
+
+  //Links sem Http
+  txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this, event);">$2</a> ');
+
+  //Links de Usuarios
+  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
+
+  // Links Normais
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
+
+  //Links de Tags
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+
+  txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
+
+  source = source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this, event);"');
+  var careator = !w.retweeted_status ?
+                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+
+                        '<span class="creator">'+user+'</span>'+
+                    '</a><br />' : '';
+  var creator = '';
+
+  if(w.reply_backup){
+    var reply_backup = w.reply_backup;
+    //var reply_backup = '';
+    var cdn = 'dn'
+  }else{
+    var reply_backup = '';
+    var cdn = 'dn';
+  }
+
+  r =
+  '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
+            '<div class="twet '+read+' '+Mentionado+'">' +
+                '<div class="text">' +
+                    '<input id="tid_'+tid+'" value="'+tid+'" type="hidden" />' +
+                    '<input id="user_'+tid+'" value="'+user+'" type="hidden" />' +
+                    '<input id="data_'+tid+'" value="'+data+'" type="hidden" />' +
+                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
+                      '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
+                    '</a>' +
+                    creator+
+                    '<div class="fr">'+
+                        fav+
+                        dm+
+                    '</div>'+
+                    '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'">'+txt+'</span>' +
+                '</div>' +
+                '<div class="cinza">' +
+                    '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" onclick="Link(this, event);" data="'+data+'"></a></span>' +
+                    ' <span class="cinza p8">via</span> '+source+' ' +
+                    in_reply +
+                    RT +
+                    del +
+                    Retweeted +
+                '</div>' +
+                '<a tid="'+tid+'" time="'+time+'" onclick="Reply('+tid+', false, \''+time+'\');" class="r click_to_reply" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
+            '</div>' +
+
+            '<div id="reply_'+tid+'" class="reply '+cdn+'" title="'+Traduz('reply')+' '+user+'">' +
+              '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
+              '<span id="retweet_choice_'+tid+'" class="dn">' +
+                  '<br />'+
+                  '<button id="rt_now_'+tid+'" onclick="RetweetOficial('+tid+', \''+time+'\')" title="'+Traduz('retweet_now')+'">'+Traduz('retweet_now')+'</button>†††' +
+                  '<button id="edit_rt_'+tid+'" onclick="RetweetEdit('+tid+', \''+time+'\');" title="'+Traduz('edit')+'">'+Traduz('edit')+'</button>††' +
+                  '<a onclick="ReplyCancel('+tid+', \''+time+'\')" class="p8" title="'+Traduz('cancel')+'">'+Traduz('cancel')+'</a>' +
+              '</span>' +
+              '<span id="reply_rt_'+tid+'" class="dn">' +
+                 '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
+                 '<button id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>†††' +
+                 '<a id="botao_'+tid+'_cancel" onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
+              '</span>' +
+              '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
+              '<span id="reply_status_'+tid+'" class="reply_left state"></span>' +
+            '</div>' +
+    '</div>';
+  return r;
+}
+
+
+function LayoutPage(w, time){
+  var user = w.user.screen_name,
+  nome = w.user.name,
+  classic_txt = w.retweeted_status ? w.text : '';
+  txt = w.retweeted_status ? w.retweeted_status.text : w.text,
+  foto = w.user.profile_image_url,
+  data = w.created_at,
+  source = w.source,
+  tid = w.id;
+
+  read = w.read ? 'read' : 'unread';
+
+  var in_reply = w.in_reply_to_status_id ? '<a class="cinza p8" href="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" target="_blank" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
+  var Retweeted = '';
+  var RT  = '<a onclick="Retweet('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
 
   if(w.retweeted_status){
     rt_user = w.user.screen_name;
@@ -1329,11 +1638,11 @@ function Layout(w, time){
     source = w.retweeted_status.source;
     tid = w.retweeted_status.id;
     in_reply = w.retweeted_status.in_reply_to_status_id ?
-    '<a class="cinza p8" href="http://twitter.com/'+w.retweeted_status.in_reply_to_screen_name+'/status/'+w.retweeted_status.in_reply_to_status_id+'" onclick="Link(this);" title="'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'</a>'
+    '<a class="cinza p8" href="http://twitter.com/'+w.retweeted_status.in_reply_to_screen_name+'/status/'+w.retweeted_status.in_reply_to_status_id+'" target="_blank" title="'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'</a>'
     : '';
-    txt = '<span class="rts" title="'+Traduz('retweeted_by')+' '+rt_user+'">Retweeted</span> <a class="reter" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a> '+txt;
-    Retweeted = '<br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')">'+rt_user+'</a>';
-    Retweeted += ' <span class="opts2">(<span class="cinza p8 tweetdata" data="'+w.created_at+'"></span>)</span>';
+    txt = '<span class="rts" title="'+Traduz('retweeted_by')+' '+rt_user+'">Retweeted</span> <a class="reter" href="http://twitter.com/'+user+'" target="_blank"'+user+'</a> '+txt;
+    Retweeted = '<br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><a class="reter p8 user" href="http://twitter.com/'+rt_user+'" target="_blank">'+rt_user+'</a>';
+    Retweeted += ' <span class="opts2">(<span class="cinza p8 tweetdata" data="'+w.created_at+'">'+TweetData(w.created_at)+'</span>)</span>';
     RT = '<a onclick="RetweetRT('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
   }
 
@@ -1343,35 +1652,35 @@ function Layout(w, time){
   var del = db.pega('user') == user ? '<a onclick="Deleta('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' : '';
 
   // Links Normais
-  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this);">$2</a> ');
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
 
   //Twitpic
-  txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
+  txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" target="_blank">$1</a>');
 
   //Tweetphoto | Pic.gd
-  txt = txt.replace(/((https?):\/\/(tweetphoto.com\/|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
+  txt = txt.replace(/((https?):\/\/(tweetphoto.com\/|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" target="_blank">$1</a>');
 
   //YouTube http://www.youtube.com/watch?v=sG5lpGdNd5E
-  txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
+  txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" target="_blank">$1</a>');
 
 
   //Links sem Http
-  txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this);">$2</a> ');
+  txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" target="_blank">$2</a> ');
 
   //Links de Usuarios
-  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
+  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="user" title="$2" href="http://twitter.com/$2" target="_blank">$2</a>');
 
   // Links Normais
-  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this);">$2</a> ');
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" target="_blank">$2</a> ');
 
   //Links de Tags
-  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this);">$3</a>');
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" target="_blank">$3</a>');
 
   txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
 
-  source = source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this);"');
+  source = source.replace('rel=\"nofollow\"', 'class="cinza p8 source" target="_blank"');
   var careator = !w.retweeted_status ?
-                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+
+                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" target="_blank">'+
                         '<span class="creator">'+user+'</span>'+
                     '</a><br />' : '';
   var creator = '';
@@ -1392,24 +1701,25 @@ function Layout(w, time){
                     '<input id="tid_'+tid+'" value="'+tid+'" type="hidden" />' +
                     '<input id="user_'+tid+'" value="'+user+'" type="hidden" />' +
                     '<input id="data_'+tid+'" value="'+data+'" type="hidden" />' +
-                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
+                    '<a title="'+nome+'" href="http://twitter.com/'+user+'" target="_blank" class="fl">' +
                       '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
                     '</a>' +
                     creator+
-                    fav+
+                    //fav+
                     '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
-                    '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" onclick="Link(this);" data="'+data+'"></a></span>' +
+                    '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" target="_blank" data="'+data+'">'+TweetData(data)+'</a></span>' +
                     ' via '+source+' ' +
                     in_reply +
-                    RT +
-                    del +
+                    //RT +
+                    //del +
                     Retweeted +
-                '</div>' +
-                '<a onclick="Reply('+tid+', false, \''+time+'\');" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
+                    '<span class="fr">'+Traduz(time)+'</span>' +
+                '</div><br />' +
+                //'<a class="click_to_reply" tid="'+tid+'" time="'+time+'" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
-
+            /*
             '<div id="reply_'+tid+'" class="reply '+cdn+'" title="'+Traduz('reply')+' '+user+'">' +
               '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
               '<span id="retweet_choice_'+tid+'" class="dn">' +
@@ -1425,7 +1735,8 @@ function Layout(w, time){
               '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
               '<span id="reply_status_'+tid+'" class="reply_left"></span>' +
             '</div>' +
-    '</div>';
+            */
+    '</div><br />';
   return r;
 }
 
@@ -1479,6 +1790,9 @@ var Utils = {
                 var LongUrl = encodeURIComponent(LongUrl);
                 Utils.Short.MigreMe(LongUrl, tid, tm, cb);
                 break;
+            case 'goo.gl':
+                Utils.Short.GooGl(LongUrl, tid, tm, cb);
+                break;
             case 'bit.ly':
                 Utils.Short.BitLy(LongUrl, tid, tm, null, cb);
                 break;
@@ -1499,6 +1813,37 @@ var Utils = {
         }
       },
 
+
+      GooGl:function(LongUrl, tid, tm, callback){
+        console.log('Shorting URL: '+LongUrl+' With: Goo.gl');
+        this.Auth = function(f){function k(){for(var c=0,b=0;b<arguments.length;b++)c=c+arguments[b]&4294967295;return c}function m(c){c=c=String(c>0?c:c+4294967296);var b;b=c;for(var d=0,i=false,j=b.length-1;j>=0;--j){var g=Number(b.charAt(j));if(i){g*=2;d+=Math.floor(g/10)+g%10}else d+=g;i=!i}b=b=d%10;d=0;if(b!=0){d=10-b;if(c.length%2==1){if(d%2==1)d+=9;d/=2}}b=String(d);b+=c;return b}function n(c){for(var b=5381,d=0;d<c.length;d++)b=k(b<<5,b,c.charCodeAt(d));return b}function o(c){for(var b=0,d=0;d<c.length;d++)b=k(c.charCodeAt(d),b<<6,b<<16,-b);return b}f={byteArray_:f,charCodeAt:function(c){return this.byteArray_[c]}};f.length=f.byteArray_.length;var e=n(f.byteArray_);e=e>>2&1073741823;e=e>>4&67108800|e&63;e=e>>4&4193280|e&1023;e=e>>4&245760|e&16383;var l="7";f=o(f.byteArray_);var h=(e>>2&15)<<4|f&15;h|=(e>>6&15)<<12|(f>>8&15)<<8;h|=(e>>10&15)<<20|(f>>16&15)<<16;h|=(e>>14&15)<<28|(f>>24&15)<<24;l+=m(h);return l};
+        var shorted;
+        var Goo = new Request(api.googl, 'post');
+            Goo.dados = {
+                user:'toolbar@google.com',
+                url: LongUrl,
+                auth_token: this.Auth(LongUrl)
+            },
+            Goo.sucesso = function(re){
+                var url = re.short_url;
+                Utils.Short.link = url;
+                shorted = url;
+                console.log(url);
+                if(!callback){
+                    Popup().ShortLinkOK(tid, tm, url);
+                }else{
+                    console.log('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                    eval('Popup().'+callback+'(\''+tid+'\', \''+tm+'\', \''+url+'\')');
+                }
+            };
+            Goo.erro = function(e){
+                console.log('Erro no Goo.gl');
+                console.log(e.responseText);
+                Popup().ShortLinkOK(tid, tm, '');
+            };
+            Goo.init();
+        return shorted;
+      },
 
       BitLy:function(LongUrl, tid, tm, jmp, callback){
         console.log('Shorting URL: '+LongUrl+' With: BitLy');
@@ -1637,13 +1982,68 @@ var Utils = {
 
 };
 
+
+chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
+  if(request.novos_tweets) {
+    sendResponse({
+      'tweets': fec.last(request.tm, request.total, request.max)
+    });
+    //var Audio = document.createElement('audio');
+        //Audio.id = 'Chrowety_Alerta';
+        //Audio.src = chrome.extension.getURL('img/alerta.wav');
+    //$(document.body).append(Audio);
+    //document.getElementById('Chrowety_Alerta').play();
+    var mp3 = 'http://vjnrv.net/Labs/Chrowety/Res/alerta.wav'
+    var music = new Audio(mp3);
+    music.play();
+  }
+
+  if(request.autorisar){
+    OAuth.pin = request.pin;
+    chrome.tabs.remove(OAuth.tab);
+    OAuth.Access();
+  }
+});
+
+function Alerts(tm, n){
+  if(config.alerts == "true"){
+    try{
+      chrome.tabs.executeScript(null, {
+             file: 'js/jquery.js'
+            }, function() {
+                chrome.tabs.insertCSS(null, {
+                       file: 'css/base_pagina.css'
+                      }, function() {
+                          chrome.tabs.executeScript(null, {code:
+                            'var _NAME_ = "'+tm+'"; var _TOTAL_ = "'+n+'";var _MAX_ = "'+config.alerts_max+'"; var _Alerts_ = "'+Traduz('alerts')+'";'
+                          });
+                          chrome.tabs.executeScript(null, {
+                                 file: 'js/script.js'
+                          });//tabs
+                      }
+                );//tabs
+            }
+      );//tabs
+    }catch(e){console.log(e)}
+  }
+}
+
+
 function Logout(){
     Chrowety.logout();
+}
+
+function OAuthAutoLogin(){
+    console.log('OAuthAutoLogin()');
+    Logado = true;
+    AuthMode = 'OAuth';
+    Chrowety.login(true);
 }
 
 function AutoLogin(){
     console.log('AutoLogin()');
     Logado = true;
+    AuthMode = 'API';
     jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+db.pega('z_z'))}});
     CheckLimit('Chrowety.Run()');
 }
@@ -1659,25 +2059,32 @@ function BrowserAction(){
   var canvas = document.getElementById('canvas');
   canvasContext = canvas.getContext('2d');
   chrome.browserAction.setBadgeBackgroundColor({color:[119, 190, 190, 190]});
-  //chrome.browserAction.setBadgeText({text:"0"});
-  //chrome.browserAction.setIcon({path:"favicon.ico"});
   chrome.browserAction.setTitle({title:"Chrowety"});
 }
-
 
 function init() {
   BrowserAction();
   LoadConfig();
   document.charset = language.charset;
   $('meta')[0].charset = language.charset;
-  if(db.pega('lembra')){
-    AutoLogin();
+  $('#language').attr('charset', language.charset);
+  if(db.pega('logado')){
+    if(db.pega('AuthMode') == 'OAuth'){
+        OAuth.LoadToken();
+        OAuthAutoLogin();
+    }else{
+        AutoLogin();
+    }
+  }else{
+    OAuth.RequestToken();
   }
 }
+
 $(document).ready(init);
 </script>
 </head>
 <body>
 <canvas id="canvas" width="27" height="23"></canvas>
+<!--<audio id="Chrowety_Alerta" src="" autoplay/>-->
 </body>
 </html>
