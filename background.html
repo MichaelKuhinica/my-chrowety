@@ -8,7 +8,17 @@
 <script type="text/javascript">
 var Popup = function(){return chrome.experimental.extension.getPopupView();}
 var m = function(i){return Math.floor(i*60000)};
+var AuthMode = null;
 
+/*
+Current changelog:
+    - Optional login without OAuth
+    - Added Option to change Base API
+    - Added button to translate tweet with configured language
+    - Added delete button to messages
+
+
+*/
 var OAuth = {
     consumer:{
       key: 'eWGZ2e24PmM301P1i0f6bQ',
@@ -61,6 +71,7 @@ var OAuth = {
     },
 
     Access:function(){
+        AuthMode = 'OAuth';
         var Acs = new Request(api.access_token, 'get', 'text');
             Acs.dados = {oauth_verifier: OAuth.pin};
             Acs.sucesso = function(e){
@@ -107,12 +118,14 @@ function Request(url, met, type, ctype){
         this.contentType = ctype ? ctype : "application/x-www-form-urlencoded",
 
         this.initOAuth = function(){
-            this.url = OAuth.Sign(this.url, this.dados, this.met).signed_url;
-            this.dados = {};
-            this.init(true);
+            if(AuthMode == 'OAuth'){
+                this.url = OAuth.Sign(this.url, this.dados, this.met).signed_url;
+                this.dados = {};
+            }
+            this.init();
         };
 
-        this.init = function(_OAuth){
+        this.init = function(){
           $.ajax({
                 url: this.url,
                 type: this.met,
@@ -126,27 +139,29 @@ function Request(url, met, type, ctype){
         };
 }
 var tBase = 'https://twitter.com';
+var tBaseOAuth = 'https://twitter.com';
 
 var api = {
-    access_token:                  tBase+ '/oauth/access_token',
-    request_token:                 tBase+ '/oauth/request_token',
-    autorize:                      tBase+ '/oauth/authorize',
+    access_token:                  tBaseOAuth+ '/oauth/access_token',
+    request_token:                 tBaseOAuth+ '/oauth/request_token',
+    autorize:                      tBaseOAuth+ '/oauth/authorize',
 
-    login:                         tBase+ '/account/verify_credentials.json',
-    logout:                        tBase+ '/account/end_session.json',
-    rate:                          tBase+ '/account/rate_limit_status.json',
-    home:                          tBase+ '/statuses/home_timeline.json',
-    friends:                       tBase+ '/statuses/friends_timeline.json',
-    mentions:                      tBase+ '/statuses/mentions.json',
-    messages:                      tBase+ '/direct_messages.json',
-    favorites:                     tBase+ '/favorites.json',
-    update:                        tBase+ '/statuses/update.json',
-    updateDM:                      tBase+ '/direct_messages/new.json',
-    user_show:                     tBase+ '/users/show.json',
-    retweet:function(id){return    tBase+ '/statuses/retweet/'+id+'.json'},
-    destroy:function(id){return    tBase+ '/statuses/destroy/'+id+'.json'},
-    favorite:function(id){return   tBase+ '/favorites/create/'+id+'.json'},
-    unfavorite:function(id){return tBase+ '/favorites/destroy/'+id+'.json'},
+    login:function(){return        tBase+ '/account/verify_credentials.json'        },
+    logout:function(){return       tBase+ '/account/end_session.json'               },
+    rate:function(){return         tBase+ '/account/rate_limit_status.json'         },
+    home:function(){return         tBase+ '/statuses/home_timeline.json'            },
+    friends:function(){return      tBase+ '/statuses/friends_timeline.json'         },
+    mentions:function(){return     tBase+ '/statuses/mentions.json'                 },
+    messages:function(){return     tBase+ '/direct_messages.json'                   },
+    favorites:function(){return    tBase+ '/favorites.json'                         },
+    update:function(){return       tBase+ '/statuses/update.json'                   },
+    updateDM:function(){return     tBase+ '/direct_messages/new.json'               },
+    user_show:function(){return    tBase+ '/users/show.json'                        },
+    retweet:function(id){return    tBase+ '/statuses/retweet/'+id+'.json'           },
+    destroy:function(id){return    tBase+ '/statuses/destroy/'+id+'.json'           },
+    destroyDM:function(id){return  tBase+ '/direct_messages/destroy/'+id+'.json'    },
+    favorite:function(id){return   tBase+ '/favorites/create/'+id+'.json'           },
+    unfavorite:function(id){return tBase+ '/favorites/destroy/'+id+'.json'          },
 
     googl:'http://goo.gl/api/url',
     threely:'http://3.ly/',
@@ -164,7 +179,7 @@ var api = {
 };
 var time = {};
 
-var Logado=false,AuthMode,_iniciou,total=0,new_count=0,api_limit = null,api_checked=false,aid,oid,taid;
+var Logado=false,_iniciou,total=0,new_count=0,api_limit = null,api_checked=false,aid,oid,taid;
 
 function SinceDate(TD){
     var a = new Date(TD);
@@ -268,6 +283,13 @@ function LoadConfig(){
     {
         console.log('LoadConfig() > Definida');
         config = S2J(db.pega('config'));
+        if(!config.base_api){
+            config.base_api = DefaultConfig.base_api;
+        }
+        if(!config.translate_tweets_to){
+            config.translate_tweets_to = DefaultConfig.translate_tweets_to;
+        }
+        db.salva('config', J2S(config));
         console.log(config);
     }else
     {
@@ -275,6 +297,7 @@ function LoadConfig(){
         config = DefaultConfig;
     }
 
+    tBase = config.base_api;
     LoadLang();
 }
 
@@ -298,6 +321,8 @@ function ReLoadConfig(){
 var config = {};
 var DefaultConfig = {
     language: 'en',
+    base_api: 'https://twitter.com',
+    translate_tweets_to: 'zh-CN',
     url_shortener: 'goo.gl',
     tweet_font_size: '10pt',
     tweet_shadow: "false",
@@ -391,23 +416,25 @@ function CalculaApiRequests(){
 }
 
 function RateLimit(func){
-  $.get(OAuth.Sign(api.rate).signed_url, null, function(json){
-    api_limit = json.remaining_hits;
-    db.salva('api_limit', json.remaining_hits);
-    db.salva('api_reset_time', json.reset_time);
-    if(api_limit > 0){
-        api_checked = true;
-        console.log('RateLimit() > OK > '+api_limit+' | '+ ApiDate(db.pega('api_reset_time')));
-        if(func){
-          try{eval(func)}catch(e){}
-        }
-    }else{
-        console.log('RateLimit() > Limit Exceeded');
-        try{
-          Popup().RefreshLimit(new_count);
-        }catch(e){}
-    }
-  }, "json");
+    var Rate = new Request(api.rate(), 'get');
+        Rate.sucesso = function(json){
+            api_limit = json.remaining_hits;
+            db.salva('api_limit', json.remaining_hits);
+            db.salva('api_reset_time', json.reset_time);
+            if(api_limit > 0){
+                api_checked = true;
+                console.log('RateLimit() > OK > '+api_limit+' | '+ ApiDate(db.pega('api_reset_time')));
+                if(func){
+                  try{eval(func)}catch(e){}
+                }
+            }else{
+                console.log('RateLimit() > Limit Exceeded');
+                try{
+                  Popup().RefreshLimit(new_count);
+                }catch(e){}
+            }
+        };
+        Rate.initOAuth();
 }
 
 function CheckLimit(r){
@@ -566,7 +593,7 @@ var Chrowety = {
     // @lembra
     // @login
     login:function(lembra, login){
-      var Login = new Request(api.login, 'get');
+      var Login = new Request(api.login(), 'get');
           Login.sucesso = function(json){
               if(AuthMode == "OAuth"){
                   console.log('Chrowety.login() '+AuthMode);
@@ -583,8 +610,9 @@ var Chrowety = {
                   console.log('Logado...');
                   Logado = true;
                   AuthMode = 'API';
+                  db.salva('logado', lembra);
+                  db.salva('AuthMode', 'API');
                   db.salva('profile_view', J2S({}));
-                  db.salva('lembra', lembra);
                   db.salva('version', Chrowety.version());
                   SalvaProfile(json);
                   CheckLimit('Chrowety.Run()');
@@ -617,14 +645,17 @@ var Chrowety = {
       window.clearInterval(time.metions);
       window.clearInterval(time.messages);
       window.clearInterval(time.favorites);
-      if(bak_conf != null){db.salva('config', bak_conf)}
+      window.clearInterval(time.profile);
+      if(bak_conf != null){
+        db.salva('config', bak_conf);
+      }
       db.salva('profile_view', bak_users);
       Logado = false;
       if(AuthMode == "OAuth"){
         OAuth.DeletaToken('OAuth.RequestToken(true)');
       }else{
         jQuery.ajaxSetup({'beforeSend': function(xhr){xhr.setRequestHeader("Authorization", "Basic "+db.pega('z_z'))}});
-        var Logout = new Request(api.logout, 'post');
+        var Logout = new Request(api.logout(), 'post');
             Logout.sucesso = function(){
               console.log('Chrowety.logout() > OK');
             };
@@ -633,12 +664,13 @@ var Chrowety = {
             };
             Logout.initOAuth();
       }
+      AuthMode = null;
     },
 
     // Atualiza informaÁıes do perfil
     profile:function(){
       console.log('Chrowety.profile()');
-      var Profile = new Request(api.login, 'get');
+      var Profile = new Request(api.login(), 'get');
           Profile.sucesso = function(json){
             console.log('Chrowety.profile() > OK');
             SalvaProfile(json);
@@ -659,7 +691,7 @@ var Chrowety = {
 
       console.log('Usuario sem Cache');
 
-      var User = new Request(api.user_show, 'get');
+      var User = new Request(api.user_show(), 'get');
           User.dados = {screen_name: uname};
           User.sucesso = function(json){
             console.log('Chrowety.user() > OK');
@@ -682,7 +714,7 @@ var Chrowety = {
      */
     update:function(s, reply_tid, tm){
       var src = 'chrowety';//'blu';//'friendfeed';//'twidroid';//'tweetdeck';//'seesmicdesktop';//
-      var Up = new Request(api.update, 'post');
+      var Up = new Request(api.update(), 'post');
           Up.dados = reply_tid ? {status: s, in_reply_to_status_id: reply_tid} : {status: s};
           Up.sucesso = function(w){
             console.log('Tweet send: '+s);
@@ -721,7 +753,7 @@ var Chrowety = {
 
     updateDM:function(s, user, tid, tm){
       var _NAME_ = 'messages';
-      var Up = new Request(api.updateDM, 'post');
+      var Up = new Request(api.updateDM(), 'post');
           Up.dados = {screen_name: user, text: s};
           Up.sucesso = function(w){
             console.log('Message send: '+s);
@@ -752,7 +784,6 @@ var Chrowety = {
     deleta:function(tid, time){
       var del = new Request(api.destroy(tid), 'post');
           del.sucesso = function(){
-            //delete tws.home.tweets[tid];
             fec.ByTid(time, tid, true);
             var _NAME_ = new Array('home', 'mentions');
             for(n in  _NAME_){
@@ -765,6 +796,18 @@ var Chrowety = {
           };
           del.erro = function(){
                 console.log('Chrowety.deleta() > FAIL');
+          };
+          del.initOAuth();
+    },
+
+    deletaDM:function(tid, time){
+      var del = new Request(api.destroyDM(tid), 'post');
+          del.sucesso = function(){
+            fec.ByTid(time, tid, true);
+            console.log('Chrowety.deletaDM() > OK');
+          };
+          del.erro = function(){
+                console.log('Chrowety.deletaDM() > FAIL');
           };
           del.initOAuth();
     },
@@ -886,7 +929,7 @@ var Chrowety = {
             var _NAME_ = 'home';
             if(!api_limit){return false}
             console.log('Chrowety.'+_NAME_+'.Run()');
-            var Run = new Request(api[_NAME_], 'get');
+            var Run = new Request(api[_NAME_](), 'get');
                 Run.dados = {count:config.start_count[_NAME_]};
                 Run.sucesso = function(json,s){
                               var id;
@@ -930,7 +973,7 @@ var Chrowety = {
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
             var novs = 0;
-            var Since = new Request(api[_NAME_], 'get');
+            var Since = new Request(api[_NAME_](), 'get');
                 Since.dados = {since_id: last};
                 Since.sucesso = function(json,s){
                               var id;
@@ -976,7 +1019,7 @@ var Chrowety = {
             var re = '';
             re = fec.html(_NAME_, {max:first});
             if(!re){
-            var Max = new Request(api[_NAME_], 'get');
+            var Max = new Request(api[_NAME_](), 'get');
                 Max.dados = {count: config.old_count[_NAME_], max_id: first};
                 Max.sucesso = function(json,s){
                               var id;
@@ -1045,7 +1088,7 @@ var Chrowety = {
             var _NAME_ = 'mentions';
             if(!api_limit){return false}
             console.log('Chrowety.'+_NAME_+'.Run()');
-            var Run = new Request(api[_NAME_], 'get');
+            var Run = new Request(api[_NAME_](), 'get');
                 Run.dados = {count:config.start_count[_NAME_]};
                 Run.sucesso = function(json,s){
                               var id;
@@ -1081,7 +1124,7 @@ var Chrowety = {
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
             var novs = 0;
-            var Since = new Request(api[_NAME_], 'get');
+            var Since = new Request(api[_NAME_](), 'get');
                 Since.dados = {since_id: last};
                 Since.sucesso = function(json,s){
                               var id;
@@ -1127,7 +1170,7 @@ var Chrowety = {
             var re = '';
             re = fec.html(_NAME_, {max:first});
             if(!re){
-            var Max = new Request(api[_NAME_], 'get');
+            var Max = new Request(api[_NAME_](), 'get');
                 Max.dados = {count: config.old_count[_NAME_], max_id: first};
                 Max.sucesso = function(json,s){
                               var id;
@@ -1188,7 +1231,7 @@ var Chrowety = {
             var _NAME_ = 'messages';
             if(!api_limit){return false}
             console.log('Chrowety.'+_NAME_+'.Run()');
-            var Run = new Request(api[_NAME_], 'get');
+            var Run = new Request(api[_NAME_](), 'get');
                 Run.dados = {count:config.start_count[_NAME_]};
                 Run.sucesso = function(json,s){
                               var id;
@@ -1224,7 +1267,7 @@ var Chrowety = {
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
             var novs = 0;
-            var Since = new Request(api[_NAME_], 'get');
+            var Since = new Request(api[_NAME_](), 'get');
                 Since.dados = {since_id: last};
                 Since.sucesso = function(json,s){
                               var id;
@@ -1270,7 +1313,7 @@ var Chrowety = {
             var re = '';
             re = fec.html(_NAME_, {max:first});
             if(!re){
-            var Max = new Request(api[_NAME_], 'get');
+            var Max = new Request(api[_NAME_](), 'get');
                 Max.dados = {count: config.old_count[_NAME_], max_id: first};
                 Max.sucesso = function(json,s){
                               var id;
@@ -1330,7 +1373,7 @@ var Chrowety = {
             if(!api_limit){return false}
             console.log('Chrowety.'+_NAME_+'.Run()');
             tws[_NAME_].total = 0;
-            var Run = new Request(api[_NAME_], 'get');
+            var Run = new Request(api[_NAME_](), 'get');
                 Run.dados = {page: 1};
                 Run.sucesso = function(json,s){
                               var id;
@@ -1377,7 +1420,7 @@ var Chrowety = {
             Chrowety[_NAME_].pagina += 1;
             var pag = Chrowety[_NAME_].pagina;
             var re = '';
-            var Max = new Request(api[_NAME_], 'get');
+            var Max = new Request(api[_NAME_](), 'get');
                 Max.dados = {page: pag};
                 Max.sucesso = function(json,s){
                               var id;
@@ -1416,9 +1459,11 @@ function LayoutMessage(w, time){
       var reply_backup = '';
   }
   //Links de Usuarios
-  //txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" onclick="ShowUser(\'$2\')">$2</a>');
+  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" onclick="ShowUser(\'$2\')">$2</a>');
   //Links de Tags
-  //txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
 
   r =
   '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
@@ -1430,10 +1475,14 @@ function LayoutMessage(w, time){
                     '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
                       '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
                     '</a>' +
-                    '<span id="texto_'+tid+'" class="texwt" data="'+txt+'">'+txt+'</span>' +
+                    '<div class="fr">'+
+                        '<a title="'+Traduz('translate_this_tweet')+'" onclick="Traduzir('+tid+', \''+time+'\');" class="trans opts">Hover</a>'+
+                    '</div>'+
+                    '<span id="texto_'+tid+'" class="texwt" data="'+escape(w.text)+'" html="'+escape(txt)+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
                     '<span title="'+tid+'" class="cinza p8 tweetdata" data="'+data+'"></span>' +
+                    '<a onclick="DeletaDM('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' +
                 '</div>' +
                 '<a onclick="ReplyDM('+tid+', \''+time+'\');" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
@@ -1460,7 +1509,7 @@ function LayoutMessage(w, time){
 function Layout(w, time){
   var user = w.user.screen_name,
   nome = w.user.name,
-  classic_txt = w.retweeted_status ? w.text : '';
+  classic_txt = escape(w.text);
   txt = w.retweeted_status ? w.retweeted_status.text : w.text,
   foto = w.user.profile_image_url,
   data = w.created_at,
@@ -1539,6 +1588,7 @@ function Layout(w, time){
 
   txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
 
+  w.html_tweet = txt;
   source = source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this, event);"');
   var careator = !w.retweeted_status ?
                     '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+
@@ -1569,8 +1619,9 @@ function Layout(w, time){
                     '<div class="fr">'+
                         fav+
                         dm+
+                        '<a title="'+Traduz('translate_this_tweet')+'" onclick="Traduzir('+tid+', \''+time+'\');" class="trans opts">Hover</a>'+
                     '</div>'+
-                    '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'">'+txt+'</span>' +
+                    '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'" html="'+escape(txt)+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
                     '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" onclick="Link(this, event);" data="'+data+'"></a></span>' +
@@ -1748,6 +1799,61 @@ var Utils = {
                Utils.currentURL = tab.url;
                return tab.url;
         });
+    },
+
+    Translate:{
+        loaded:false,
+
+        load:function(resp){
+            var JSAPI = document.createElement('script');
+                JSAPI.src = 'http://www.google.com/jsapi';
+                JSAPI.onload = function(){
+                    google.load("language", "1", {
+                        callback:function(){
+                            Utils.Translate.loaded = true;
+                            if(resp) resp();
+                        }
+                    });
+                };
+                document.head.appendChild(JSAPI);
+        },
+
+        trans:function(txt, tid, tm){
+            if(!Utils.Translate.loaded){
+                Utils.Translate.load(function(){
+                    Utils.Translate.trans(txt, tid, tm);
+                });
+                return false;
+            }
+            var Lingua = config.translate_tweets_to;//config.translation_to;
+            google.language.detect(txt, function(re) {
+              if(!re.error && re.language){
+                google.language.translate(txt, re.language, Lingua, function(re){
+                  if(re.translation){
+                    //console.log(re.translation);
+                    var txt = re.translation;
+                    txt = re.translation.replace('@ ', '@');
+                    txt = re.translation.replace('# ', '#');
+                    txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
+                    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+                    txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
+
+                    try{
+                      Popup().TraduzirOK(txt, tid, tm);
+                    }
+                    catch(e){console.log(e)}
+                  }else{
+                    try{
+                      Popup().TraduzirFAIL(re, tid, tm);
+                    }
+                    catch(e){console.log(e)}
+                  }
+                });
+              }
+            });
+
+        },
+
     },
 
     Long:{

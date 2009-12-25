@@ -86,5 +86,12 @@ var language = {
           "text_shadow": "Tekst schaduw",
           "tweet_font_size": "Tweet lettergrootte",
           "open_links_in_background": "Open links in background",
+          "or": "Oder",
+          "sign_in_with_twitter": "Melden Sie sich mit Twitter"
+          "request_new_auth": "einen neuen Authorization Request",
+          "translate_this_tweet": "Translate this entry",
+          "translate_tweets_to": "Übersetzen tweets zu",
+          "base_api": "Base-API",
+          "base_api_effect": "Base-API sind nur wirksam, wenn Sie API-Login-Modus",
   }
 };

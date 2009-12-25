@@ -39,7 +39,7 @@ var language = {
           "unfavorite": "No favorito",
           "show_more": "Mostrar más...",
           "no_more_tweets": "No más tweets",
-          "new_tweet": "Nuevo tweet",
+          "new_tweet": "Nuevo& tweet& ",
           "logging": "Iniciando...",
           "sucess_login": "Iniciado correctamente",
           "tweets": "Tweets",
@@ -86,5 +86,12 @@ var language = {
           "text_shadow": "Sombras en el texto",
           "tweet_font_size": "Tamaño de la fuente Tweet",
           "open_links_in_background": "Abrir enlaces en segundo plano",
+          "or": "O",
+          "sign_in_with_twitter": "Entra con Twitter",
+          "request_new_auth": "Solicitar una autorizacion nuevo",
+          "translate_this_tweet": "Traducir esta pío",
+          "translate_tweets_to": "Traducir a tweets",
+          "base_api": "API Base",
+          "base_api_effect": "API Base sólo surtirá efecto si está utilizando la API Login Mode",
   }
 };

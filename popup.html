@@ -238,9 +238,21 @@ function LoadProfile(){
    $('.info').show();
 }
 
+String.prototype.replaceAll = function(strTarget,strSubString){
+  var strText = this;
+  var intIndexOfMatch = strText.indexOf( strTarget );
+  while (intIndexOfMatch != -1){
+    strText = strText.replace(strTarget,strSubString )
+    intIndexOfMatch = strText.indexOf(strTarget);
+  }
+  return(strText);
+}
+
 function RefreshResult(n, time){
     if(n > 0){
-      var t = n > 1 ? ' new tweets' : ' new tweet';
+      var t = n > 1 ?
+      ' '+Traduz('new_tweet').replaceAll("& ", Controller().language.plural_word+' ') :
+      ' '+Traduz('new_tweet').replaceAll("& ", ' ');
       $('#new_twets_'+time).fadeIn();
       $('#new_twets_'+time).text(n+t);
     }
@@ -253,16 +265,17 @@ function RefreshTweets(time){
 }
 
 function RefreshLimit(n){
-    $('#load_image').hide();
     if(n){
       if(n == 0){
           $('#load_result').text(Traduz('api_excedeed'));
+          $('#load_image').hide();
       }else{
           //$('#load_result').text('Remaining API: '+n);
       }
     }else{
       if(Controller().api_limit == 0){
           $('#load_result').text(Traduz('api_excedeed'));
+          $('#load_image').hide();
       }else{
 
       }
@@ -344,6 +357,13 @@ function Count(tid, time, pulaBak){//Conta o limite de caracteres do tweet e sal
 
 function Deleta(tid, tm){
   Controller().Chrowety.deleta(tid, tm);
+  $('#twets_'+tm+' #tweply_'+tid).fadeOut(function(){
+    $('#twets_'+tm+' #tweply_'+tid).remove();
+  });
+}
+
+function DeletaDM(tid, tm){
+  Controller().Chrowety.deletaDM(tid, tm);
   $('#twets_'+tm+' #tweply_'+tid).fadeOut(function(){
     $('#twets_'+tm+' #tweply_'+tid).remove();
   });
@@ -722,7 +742,7 @@ function Retweet(tid, time){//Mostra o elemento do Reply com o Retweet
 }
 
 function RetweetRT(tid, time){//Mostra o elemento do Reply com o Retweet
-  var txt = $('#twets_'+time+' #texto_'+tid).attr("data");
+  var txt = unescape($('#twets_'+time+' #texto_'+tid).attr("data"));
   Reply(tid, txt, time);
 }
 
@@ -752,7 +772,7 @@ function LoginStatus(t){
 
 function GoLogin(){
   $('#init').fadeOut(function(){
-     $('#login').fadeIn();
+     $('#OAuthLogin').fadeIn();
      window.close();
   });
 }
@@ -940,6 +960,31 @@ function Youtube(id){
     ShowPopup();
 }
 
+function Traduzir(tid, tm){
+    Controller().console.log('Traduzir()');
+    var el = $('#twets_'+tm+' #texto_'+tid);
+    var txt = unescape(el.attr('data'));
+    var html = unescape(el.attr('html'));
+    if(el.attr('traduzido')){
+      el.html(html);
+      el.removeAttr('traduzido');
+    }else{
+      Controller().Utils.Translate.trans(txt, tid, tm);
+    }
+}
+
+function TraduzirOK(txt, tid, tm){
+    Controller().console.log('TraduzirOK()');
+    var el = $('#twets_'+tm+' #texto_'+tid);
+    el.attr('traduzido', true);
+    el.html(txt);
+}
+
+function TraduzirFAIL(re, tid, tm){
+    Controller().console.log('TraduzirFAIL()');
+    Controller().console.log(re);
+}
+
 function OAuthLogin(){
     Controller().OAuth.Autorisar();
     return false;
@@ -976,20 +1021,13 @@ function RequestToken(){
 }
 
 function init(){
-  var auth = 'oauth';
   if(!Controller().Logado){
-    if(auth == 'normal'){
-      $('#usuario').val(db.pega('user'));
-      $('#usuario').focus();
-      $('#login').show();
-    }else if(auth == 'oauth'){
-      $('#OAuthLogin').show();
-      if(Controller().OAuth.token.oauth_token){
-        $('#autorize_button').text('Sign in with Twitter');
-        $('#autorize_button').removeAttr('disabled');
-      }else{
-        Controller().OAuth.RequestToken();
-      }
+    $('#OAuthLogin').show();
+    if(Controller().OAuth.token.oauth_token){
+      $('#autorize_button').text(Traduz('sign_in_with_twitter'));
+      $('#autorize_button').removeAttr('disabled');
+    }else{
+      Controller().OAuth.RequestToken();
     }
     LoginUp = true;
     return false;
@@ -1002,10 +1040,9 @@ function init(){
 
   LoadProfile();
   RefreshLimit();
-  $('#login').hide();
 
+  $('#OAuthLogin').hide();
   $('#reply_text_update').val(Slogan);
-
   $('#init').show();
 
   if(Controller().Chrowety.profile_last_view){
@@ -1200,9 +1237,19 @@ $(document).ready(init);
   </div><!-- <TIMELINE -->
 </div>
 
-<div id="login" class="login dn">
-    <form onsubmit="return Login();">
-      <div class="title">Chrowety Login</div>
+<div id="OAuthLogin" class="login dn">
+    <form onsubmit="return OAuthLogin();">
+      <br />
+      <button disabled="disabled" id="autorize_button" type="submit"><img id="autorize_image" src="img/load.gif" /></button>
+      <br /><br />
+      <a onclick="RequestToken();" class="p8">(<script>html(Traduz('request_new_auth'))</script>)</a>
+      <br />
+      <br />
+    </form>
+    <script>html(Traduz('or'))</script>
+    <br /><br />
+    <div class="bar pointer" onclick="$('#api_login').slideToggle(function(){$('#usuario').focus();});">API Login</div>
+    <form id="api_login"class="dn" onsubmit="return Login();">
       <br />
       <label class="inp"><script>html(Traduz('username'))</script>:
           <input id="usuario" type="text" size="10" tabindex="1"/>
@@ -1220,17 +1267,6 @@ $(document).ready(init);
       <button type="submit" tabindex="3"><script>html(Traduz('login'))</script></button>
       <br /><br />
       <span id="status_login" class="dn"></span>
-    </form>
-</div>
-
-<div id="OAuthLogin" style="width:150px;" class="login dn">
-    <form onsubmit="return OAuthLogin();">
-      <br />
-      <button disabled="disabled" id="autorize_button" type="submit"><img id="autorize_image" src="img/load.gif" /></button>
-      <br /><br />
-      <a onclick="RequestToken();" class="p8">(Request a new Autorization)</a>
-      <br />
-      <br />
     </form>
 </div>
 

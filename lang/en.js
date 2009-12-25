@@ -86,5 +86,12 @@ var language = {
           "text_shadow": "Text Shadow",
           "tweet_font_size": "Tweet font size",
           "open_links_in_background": "Open links in background",
+          "or": "Or",
+          "sign_in_with_twitter": "Sign in with Twitter",
+          "request_new_auth": "Request a new Autorization",
+          "translate_this_tweet": "Translate this tweet",
+          "translate_tweets_to": "Translate tweets to",
+          "base_api": "Base API",
+          "base_api_effect": "Base API only take effect if you are using API Login Mode",
   }
 };

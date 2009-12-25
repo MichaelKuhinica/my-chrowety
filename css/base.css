@@ -183,7 +183,7 @@ input[type="password"]{
   border-radius: 4px;
   background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#eee), to(#fff));
   border: 1px solid #ccc;
-  padding-top:10px;
+  padding-top:5px;
   padding-left:10px;
   margin-bottom:10px;
 }
@@ -234,6 +234,14 @@ input[type="password"]{
 .menu .info{
   /*text-shadow: 1px 1px 1px #aaa;*/
 }
+.bar{
+  background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#DDD));
+  padding: 4px;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+
+
 .menu button{
   border-top-left-radius: 3px;
   border-top-right-radius: 3px;
@@ -612,6 +620,20 @@ button[disabled="disabled"]:hover{
 }
 .msg:hover{
   background-position: -48px -32px;
+}
+.trans{
+  background:transparent url('../img/trans.png');
+  width:16px;
+  height:16px;
+  text-indent:-999px;
+  display:inline-block;
+}
+.trans:hover{
+  background:transparent url('../img/trans_hover.png');
+  width:16px;
+  height:16px;
+  text-indent:-999px;
+  display:inline-block;
 }
 
 /* FIM ICONS */

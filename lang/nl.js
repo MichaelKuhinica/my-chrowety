@@ -86,5 +86,12 @@ var language = {
           "text_shadow": "Textschaduw",
           "tweet_font_size": "Tweet lettergrootte",
           "open_links_in_background": "Open links op de achtergrond",
+          "or": "Of",
+          "sign_in_with_twitter": "Meld u aan met Twitter",
+          "request_new_auth": "Vraag een nieuwe machtigingsprocedures",
+          "translate_this_tweet": "Vertaal deze Tweet",
+          "translate_tweets_to": "tweets Vertalen naar",
+          "base_api": "Base API",
+          "base_api_effect": "Base API alleen van kracht als u API Inloggen modus gebruikt",
   }
 };
