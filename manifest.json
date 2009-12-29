@@ -1,0 +1,32 @@
+{
+   "background_page": "background.html",
+   "options_page": "conf.html",
+   "browser_action": {
+     "default_title": "Chrowety",
+     "default_icon": "icones/x19.png",
+     "popup": {
+        "path": "popup.html"
+     }
+   },
+   "content_scripts": [
+    {
+      "js": ["js/oauth.js"],
+      "matches": ["https://twitter.com/oauth/authorize", "https://api.twitter.com/oauth/authorize"]
+    }
+   ],
+   "permissions": [
+     "tabs",
+     "http://*/*",
+     "https://*/*"
+   ],
+   "icons": {
+     "16": "icones/x16.png",
+     "32": "icones/x32.png",
+     "48": "icones/x48.png",
+     "128":"icones/x128.png"
+   },
+   "name": "Chrowety",
+   "description": "A twitter client for Google Chrome",
+   "version": "1.6.8",
+   "update_url": "http://clients2.google.com/service/update2/crx"
+}
