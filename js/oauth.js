@@ -1,5 +1,5 @@
 var pin = document.getElementById('oauth_pin').innerText;
 chrome.extension.sendRequest({
-  'autorisar': true,
+  'autorizar': true,
   'pin': pin
 });
