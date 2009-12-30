@@ -93,5 +93,8 @@ var language = {
           "translate_tweets_to": "Übersetzen tweets zu",
           "base_api": "Base-API",
           "base_api_effect": "Base-API sind nur wirksam, wenn Sie API-Login-Modus",
+		  "lists": "Listen",
+		  "add_list": "Liste& hinzuf&uuml;gen",
+		  "remove_list": "Liste& entfernen"
   }
 };

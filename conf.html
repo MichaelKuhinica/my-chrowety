@@ -158,9 +158,10 @@ $(document).ready(init);
                 <option value="30">30</option>
               </select>
             </label>
-                    
+			<span class="button_margin"></span>
             <label><script>html(Traduz('refresh_time'))</script>
               <select id="home_refresh_time">
+              	<option value="1">1 <script>html(Traduz('minutes'))</script></option>
                 <option value="3">3 <script>html(Traduz('minutes'))</script></option>
                 <option value="5">5 <script>html(Traduz('minutes'))</script></option>
                 <option value="8">8 <script>html(Traduz('minutes'))</script></option>
@@ -182,7 +183,7 @@ $(document).ready(init);
                 <option value="30">30</option>
               </select>
             </label>
-                    
+			<span class="button_margin"></span>
             <label><script>html(Traduz('refresh_time'))</script>
               <select id="mentions_refresh_time">
                 <option value="3">3 <script>html(Traduz('minutes'))</script></option>
@@ -207,7 +208,7 @@ $(document).ready(init);
                 <option value="30">30</option>
               </select>
             </label>
-                    
+			<span class="button_margin"></span>        
             <label><script>html(Traduz('refresh_time'))</script>
               <select id="messages_refresh_time">
                 <option value="5">5 <script>html(Traduz('minutes'))</script></option>
@@ -228,7 +229,6 @@ $(document).ready(init);
                 <option value="bit.ly">bit.ly</option>
                 <option value="j.mp">j.mp</option>
                 <option value="is.gd">is.gd</option>
-               <!-- <option value="tr.im">tr.im</option> -->
               </select>
             </label>
             <br /><br />
@@ -261,37 +261,6 @@ $(document).ready(init);
                 <option value="false"><script>html(Traduz('no'))</script></option>
               </select>
             </label>    
-<!--
-            <br /><br />
-            <span class="stit"><script>html(Traduz('favorites'))</script>:</span>
-            <label>Tweets per page
-              <select id="home_tweets_page">
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-                <option value="25">25</option>
-                <option value="30">30</option>
-              </select>
-            </label>
-                    
-            <label>Refresh time
-              <select id="home_refresh_time">
-                <option value="5">5 Minutes</option>
-                <option value="7">7 Minutes</option>
-                <option value="10">10 Minutes</option>
-                <option value="15">15 Minutes</option>
-                <option value="20">20 Minutes</option>
-              </select>
-            </label>
-
-            <label>Show Retweets
-                <input type="checkbox"/>
-            </label>
-            <br />
-            <label>Show Retweets
-                <input type="radio"/>
-            </label>
--->
             <br /><br />
             </div>
         </fieldset>
@@ -302,12 +271,12 @@ $(document).ready(init);
             <label><script>html(Traduz('language'))</script>
               <select id="language">
                 <option value="en">English</option>
-                <option value="pt-br">Português (Brasil)</option>
-                <option value="es">Español</option>
+                <option value="pt-br">Portugu&ecirc;s (Brasil)</option>
+                <option value="es">Espa&ntilde;ol</option>
                 <option value="de">German</option>
                 <option value="nl">Dutch</option>
               </select>
-            </label> <!--(<script>html(Traduz('restart_required'))</script>)-->
+            </label>
             <br /><br />
             <label><script>html(Traduz('translate_tweets_to'))</script>
               <select id="translate_tweets_to">
@@ -348,7 +317,7 @@ $(document).ready(init);
                 <option value="no">Norwegian</option>
                 <option value="fa">Persian</option>
                 <option value="pl">Polish</option>
-                <option value="pt">Português</option>
+                <option value="pt">Portugu&ecirc;s</option>
                 <option value="ro">Romanian</option>
                 <option value="ru">Russian</option>
                 <option value="sr">Serbian</option>

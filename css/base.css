@@ -636,6 +636,36 @@ button[disabled="disabled"]:hover{
   display:inline-block;
 }
 
+/* Lists */
+#submenu_lists button{
+  margin-right:3px;
+  margin-bottom:5px;
+}
+#show_lists_lists{
+    width:250px;
+}
+#show_lists_lists .list{
+    padding:3px;
+    border-radius:3px;
+    cursor:pointer;
+    border:1px solid #eee;
+    width:240px;
+    height:16px;
+    line-height:16px;
+    vertical-align:middle;
+}
+#show_lists_lists .list:hover,
+#show_lists_lists .ds{
+    background:#eee;
+}
+#show_lists_lists .list[disabled="disabled"]{
+    opacity:.3;
+    cursor:default;
+}
+#show_lists_lists .list[disabled="disabled"]:hover{
+    background:none;
+}
+
 /* FIM ICONS */
 @font-face {
     font-family: 'Oceania Light';
@@ -649,6 +679,9 @@ button[disabled="disabled"]:hover{
   -webkit-background-clip: text;
 }
 
+.button_margin{
+	margin-right:5px;
+}
 .pointer{cursor:pointer}
 .reflect{-webkit-box-reflect:below 0.01em -webkit-gradient(linear, left top, left bottom, from(transparent), color-stop(0.7, transparent), to(white));}
 .vmiddle{vertical-align:middle}

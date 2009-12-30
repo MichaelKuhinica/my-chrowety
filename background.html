@@ -11,12 +11,8 @@ var AuthMode = null;
 
 /*
 Current changelog:
-    - Optional login without OAuth
-    - Added Option to change Base API
-    - Added button to translate tweet with configured language
-    - Added delete button to messages
-
-
+    - Support twitter Lists
+    - Change language in realtime
 */
 var OAuth = {
     consumer:{
@@ -194,6 +190,7 @@ function ApiDate(TD){
 
 function TweetData(TD) {
   var TD = Date.parse(TD);
+  var s;
   var Calc = (new Date().getTime() - TD) / 1000;
   if(Calc < 15) {
           return Traduz('just_now');
@@ -201,23 +198,19 @@ function TweetData(TD) {
           return Traduz('less_than_a_minute_ago');
   } else if(Calc < 60 * 60) {
           var Min = parseInt(Calc / 60);
-          var s = Traduz('minute_ago').replace('%s', Min);
-              s = s.replace('& ', ((Min > 1) ? language.plural_word+' ' : " "));
+		  	s = (Min > 1) ? Traduz('minute_ago',true).replace('%s',Min) : Traduz('minute_ago').replace('%s',Min);
           return s;
   } else if(Calc < 60 * 60 * 24) {
           var Hor = parseInt(Calc / (60 * 60));
-          var s = Traduz('about_hour_ago').replace('%s', Hor);
-              s = s.replace('& ', ((Hor > 1) ? language.plural_word+' ' : " "));
+		  	s = (Hor > 1) ? Traduz('about_hour_ago', true).replace('%s', Hor) : Traduz('about_hour_ago').replace('%s', Hor);
           return s;
   } else if(Calc < 60 * 60 * 24 * 30) {
           var Day = parseInt(Calc / (60 * 60 * 24));
-          var s = Traduz('about_day_ago').replace('%s', Day);
-              s = s.replace('& ', ((Day > 1) ? language.plural_word+' ' : " "));
+		  	s = (Day > 1) ? Traduz('about_day_ago',true).replace('%s', Day) : Traduz('about_day_ago').replace('%s', Day);
           return s;
   } else if(Calc < 60 * 60 * 24 * 30 * 12) {
           var Month = parseInt(Calc / (60 * 60 * 24 * 30));
-          var s = Traduz('about_month_ago').replace('%s', Month);
-              s = s.replace('& ', ((Month > 1) ? "e"+language.plural_word+' ' : " "));
+		  	s = (Month > 1) ? Traduz('about_month_ago',true,(language.id == 'pt_br' || language.id == 'es' ? 'es' :null)).replace('%s', Month) : Traduz('about_month_ago').replace('%s', Month);
           return s;
   } else {
           return Traduz('years_ago');
@@ -287,8 +280,12 @@ function LoadLang(){
     console.log('LoadLang() > '+lg);
 }
 
-function Traduz(s, e){
-  return language[language.id][s]+(e?e:'');
+function Traduz(s, e, pl){
+	if(e === true){
+		return (language[language.id][s]).replace('& ', (pl?pl:language.plural_word)+' ');
+	}else{
+		return (language[language.id][s]).replace('& ', ' ')+(e?e:'');	
+	}
 }
 
 function LoadConfig(){
@@ -325,7 +322,7 @@ function LoadConfig(){
         console.log(config);
     }else
     {
-        console.log('LoadConfig() > Padrão');
+        console.log('LoadConfig() > Padrï¿½o');
         config = DefaultConfig;
     }
 
@@ -420,9 +417,6 @@ function Sortear(ob, campo, reverso){
     return ob2.sort(SortFunc(campo, reverso, parseInt));
 }
 
-
-
-
 function SaveCache(){
     var user     = db.pega('user');
     var _NAME_ = new Array('home', 'mentions', 'messages', 'favorites');
@@ -477,7 +471,7 @@ function CheckLimit(r){
 function ClearUnreads(tm){
     //console.log('Cleaning Unreads > '+tm);
 
-    if(tws.list[tm]){
+    if(tws.lists && tws.list && tws.list[tm]){
         tws.list[tm].new_count = 0;
         for(id in tws.list[tm].tweets){
             tws.list[tm].tweets[id].read = true;
@@ -504,7 +498,6 @@ function SalvaProfile(json){
   db.salva('seguindo', json.friends_count);
   db.salva('favoritos', json.favourites_count);
 }
-
 
 function ContaTweets(tm, list){
     var i=0;
@@ -758,7 +751,7 @@ var Chrowety = {
       AuthMode = null;
     },
 
-    // Atualiza informações do perfil
+    // Atualiza informaï¿½ï¿½es do perfil
     profile:function(){
       console.log('Chrowety.profile()');
       var Profile = new Request(api.login(), 'get');
@@ -1724,7 +1717,7 @@ function LayoutMessage(w, time){
   //Links de Usuarios
   txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" onclick="ShowUser(\'$2\')">$2</a>');
   //Links de Tags
-  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúıÁÉÍÓÚİàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
 
   txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
 
@@ -1758,7 +1751,7 @@ function LayoutMessage(w, time){
               '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
               '<span id="reply_rt_'+tid+'" class="dn">' +
                  '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
-                 '<button id="botao_'+tid+'" onclick="doReplyDM('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Enter)">'+Traduz('done')+'</button>   ' +
+                 '<button class="button_margin" id="botao_'+tid+'" onclick="doReplyDM('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Enter)">'+Traduz('done')+'</button>' +
                  '<a onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
               '</span>' +
               '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
@@ -1850,7 +1843,7 @@ function Layout(w, time, list){
   txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
 
   //Links de Tags
-  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúıÁÉÍÓÚİàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
 
   txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
 
@@ -1904,13 +1897,13 @@ function Layout(w, time, list){
               '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
               '<span id="retweet_choice_'+tid+'" class="dn">' +
                   '<br />'+
-                  '<button id="rt_now_'+tid+'" onclick="RetweetOficial('+tid+', \''+time+'\')" title="'+Traduz('retweet_now')+'">'+Traduz('retweet_now')+'</button>   ' +
-                  '<button id="edit_rt_'+tid+'" onclick="RetweetEdit('+tid+', \''+time+'\');" title="'+Traduz('edit')+'">'+Traduz('edit')+'</button>  ' +
+                  '<button class="button_margin" id="rt_now_'+tid+'" onclick="RetweetOficial('+tid+', \''+time+'\')" title="'+Traduz('retweet_now')+'">'+Traduz('retweet_now')+'</button>' +
+                  '<button class="button_margin" id="edit_rt_'+tid+'" onclick="RetweetEdit('+tid+', \''+time+'\');" title="'+Traduz('edit')+'">'+Traduz('edit')+'</button>' +
                   '<a onclick="ReplyCancel('+tid+', \''+time+'\')" class="p8" title="'+Traduz('cancel')+'">'+Traduz('cancel')+'</a>' +
               '</span>' +
               '<span id="reply_rt_'+tid+'" class="dn">' +
                  '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
-                 '<button id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>   ' +
+                 '<button class="button_margin" id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>' +
                  '<a id="botao_'+tid+'_cancel" onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
               '</span>' +
               '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
@@ -1985,7 +1978,7 @@ function LayoutPage(w, time){
   txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" target="_blank">$2</a> ');
 
   //Links de Tags
-  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúıÁÉÍÓÚİàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" target="_blank">$3</a>');
+  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" target="_blank">$3</a>');
 
   txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
 
@@ -2030,23 +2023,6 @@ function LayoutPage(w, time){
                 '</div><br />' +
                 //'<a class="click_to_reply" tid="'+tid+'" time="'+time+'" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
-            /*
-            '<div id="reply_'+tid+'" class="reply '+cdn+'" title="'+Traduz('reply')+' '+user+'">' +
-              '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
-              '<span id="retweet_choice_'+tid+'" class="dn">' +
-                  '<button id="rt_now_'+tid+'" onclick="RetweetOficial('+tid+', \''+time+'\')" title="'+Traduz('retweet_now')+'">'+Traduz('retweet_now')+'</button>   ' +
-                  '<button id="edit_rt_'+tid+'" onclick="RetweetEdit('+tid+', \''+time+'\');" title="'+Traduz('edit')+'">'+Traduz('edit')+'</button>  ' +
-                  '<a onclick="ReplyCancel('+tid+', \''+time+'\')" class="p8" title="'+Traduz('cancel')+'">'+Traduz('cancel')+'</a>' +
-              '</span>' +
-              '<span id="reply_rt_'+tid+'" class="dn">' +
-                 '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
-                 '<button id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>   ' +
-                 '<a onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
-              '</span>' +
-              '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
-              '<span id="reply_status_'+tid+'" class="reply_left"></span>' +
-            '</div>' +
-            */
     '</div><br />';
   return r;
 }
@@ -2101,7 +2077,7 @@ var Utils = {
                     txt = re.translation.replace('@ ', '@');
                     txt = re.translation.replace('# ', '#');
                     txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
-                    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúıÁÉÍÓÚİàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+                    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
                     txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
 
                     try{
@@ -2178,8 +2154,7 @@ var Utils = {
                 Utils.Short.Threely(LongUrl, tid, tm, null, cb);
         }
       },
-
-
+	  
       GooGl:function(LongUrl, tid, tm, callback){
         console.log('Shorting URL: '+LongUrl+' With: Goo.gl');
         this.Auth = function(f){function k(){for(var c=0,b=0;b<arguments.length;b++)c=c+arguments[b]&4294967295;return c}function m(c){c=c=String(c>0?c:c+4294967296);var b;b=c;for(var d=0,i=false,j=b.length-1;j>=0;--j){var g=Number(b.charAt(j));if(i){g*=2;d+=Math.floor(g/10)+g%10}else d+=g;i=!i}b=b=d%10;d=0;if(b!=0){d=10-b;if(c.length%2==1){if(d%2==1)d+=9;d/=2}}b=String(d);b+=c;return b}function n(c){for(var b=5381,d=0;d<c.length;d++)b=k(b<<5,b,c.charCodeAt(d));return b}function o(c){for(var b=0,d=0;d<c.length;d++)b=k(c.charCodeAt(d),b<<6,b<<16,-b);return b}f={byteArray_:f,charCodeAt:function(c){return this.byteArray_[c]}};f.length=f.byteArray_.length;var e=n(f.byteArray_);e=e>>2&1073741823;e=e>>4&67108800|e&63;e=e>>4&4193280|e&1023;e=e>>4&245760|e&16383;var l="7";f=o(f.byteArray_);var h=(e>>2&15)<<4|f&15;h|=(e>>6&15)<<12|(f>>8&15)<<8;h|=(e>>10&15)<<20|(f>>16&15)<<16;h|=(e>>14&15)<<28|(f>>24&15)<<24;l+=m(h);return l};
@@ -2311,7 +2286,6 @@ var Utils = {
             Ly.init();
         return shorted;
       },
-
 
     },
 

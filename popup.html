@@ -55,8 +55,11 @@ var LT = {
     Auto:function(){
         if(db.pega('AbaAtiva')){
           if(db.pega('AbaAtiva') == 'list'){
-            //LT.list(db.pega('ListAtiva'));
-            LT.home();
+			if(!Controller().tws.list[db.pega('ListAtiva')].ativo){
+				LT.home();	
+			}else{
+				LT.list(db.pega('ListAtiva'));	
+			}
           }else{
             LT[db.pega('AbaAtiva')]();
           }
@@ -105,29 +108,29 @@ var LT = {
     loadList:function(name){
         if(!Controller().tws.list[name].ativo){
             if(!Controller().tws.list[name]._loaded){
-                $('#show_lists_ok_'+name).hide();
                 $('#show_lists_load_'+name).show();
                 $('#lists_'+name)[0].setAttribute('disabled', 'disabled');
+				$('#lists_'+name).attr('title', Traduz('add_list'));
                 Controller().Chrowety.List.Run(name, 'LT.addList(\''+name+'\')');
             }else{
-                $('#show_lists_ok_'+name).hide();
-                $('#show_lists_cancel_'+name).show();
+				$('#lists_'+name).addClass('ds');
+				$('#lists_'+name).attr('title', Traduz('remove_list'));
                 Controller().tws.list[name].ativo = true;
             }
 
         }else{
-            $('#show_lists_cancel_'+name).hide();
-            $('#show_lists_ok_'+name).show();
+			$('#lists_'+name).removeClass('ds');
+			$('#lists_'+name).attr('title', Traduz('add_list'));
             Controller().tws.list[name].ativo = false;
         }
         LT.initLists();
     },
 
     addList:function(name){
-        $('#show_lists_cancel_'+name).show();
-        $('#show_lists_ok_'+name).hide();
         $('#show_lists_load_'+name).hide();
-        $('#lists_'+name)[0].removeAttribute('disabled');
+        $('#lists_'+name).addClass('ds');
+		$('#lists_'+name).attr('title', Traduz('remove_list'));
+        $('#lists_'+name)[0].removeAttribute('disabled');		
         LT.initLists();
     },
 
@@ -145,13 +148,13 @@ var LT = {
             fnomes = Controller().tws.lists.full_names;
             var i = 0;
             for(i; i < nomes.length; i++){
-                var dn_ok     = Controller().tws.list[nomes[i]].ativo ? 'dn' : '';
-                var dn_cancel = Controller().tws.list[nomes[i]].ativo ? '' : 'dn';
+                var dn_ok     = Controller().tws.list[nomes[i]].ativo ? 'ds' : '';
+                var dn_title  = Controller().tws.list[nomes[i]].ativo ? Traduz('remove_list') : Traduz('add_list');
                 var lay =
-                '<div onclick="LT.loadList(this.getAttribute(\'list\'));" id="lists_'+nomes[i]+'" list="'+nomes[i]+'" class="list">'+
+                '<div onclick="LT.loadList(this.getAttribute(\'list\'));" title="'+dn_title+'" id="lists_'+nomes[i]+'" list="'+nomes[i]+'" class="list '+dn_ok+'">'+
                     '<span class="fl">'+fnomes[i]+'</span>'+
-                    '<span class="fr '+dn_ok+'" id="show_lists_ok_'+nomes[i]+'"><img src="img/+.png"/></span>'+
-                    '<span class="fr '+dn_cancel+'" id="show_lists_cancel_'+nomes[i]+'"><img src="img/-.png"/></span>'+
+                    //'<span class="fr '+dn_ok+'" id="show_lists_ok_'+nomes[i]+'"><img src="img/+.png"/></span>'+
+                    //'<span class="fr '+dn_cancel+'" id="show_lists_cancel_'+nomes[i]+'"><img src="img/-.png"/></span>'+
                     '<span class="fr dn" id="show_lists_load_'+nomes[i]+'"><img src="img/load.gif" /></span>'+
                 '</div>';
                 $('#show_lists_lists').append(lay);
@@ -469,20 +472,18 @@ function Link(e, ev, h){
 }
 
 function DisableButton(tid, tm, str){
-     //gid((str ? str : 'botao_')+tid).setAttribute("disabled","disabled");
-     //$('#botao_'+tid)[0].setAttribute("disabled","disabled");
-     console.log('DisableButton() > '+tid+' '+tm);
+     //console.log('DisableButton() > '+tid+' '+tm);
      $('#twets_'+tm+' #'+(str?str:'botao_')+tid)[0].setAttribute("disabled","disabled");
 }
 
 function Count(tid, time, pulaBak){//Conta o limite de caracteres do tweet e salva backup
    var r = $('#twets_'+time+' #reply_text_'+tid);
    if(tid == 'update'){
-     log('Backup Update: '+r.val());
+     //log('Backup Update: '+r.val());
      db.salva('update_backup', r.val());
    }else{
      if(!pulaBak){
-       Controller().console.log('Count('+tid+', \''+time+'\')');
+       //Controller().console.log('Count('+tid+', \''+time+'\')');
        BackupReply(tid, r.val(), time);
      }
    }
@@ -644,7 +645,12 @@ function Update(){
         }
         $("#reply_text_update").focus();
         $("#update_co2").slideDown("fast");
-        $('.twets').css('height', '400px');
+		if(!$('#submenu_lists').text()){
+			$('.twets').css('height', '400px');	
+		}else{
+			$('.twets').css('height', '380px');
+		}
+        
         LT.more(true);
         Count('update', 'update');
   });
@@ -759,8 +765,6 @@ function ShortLink(tid, time){
         return false;
     }
     $('#twets_'+time+' #short_link_url_'+tid).val(Traduz('shorting_url', '...'));
-    //Controller().Utils.Short.Threely(url, tid, time);
-    //Controller().Utils.Short.MigreMe(url, tid, time);
     Controller().Utils.Short.short(url, tid, time);
 }
 
@@ -935,7 +939,7 @@ function GoLogin(){
 function PictureZoom(el, outforce){
     var zoom = $(el).attr('zoom');
     if(zoom == 'in' && !outforce){
-        var newsrc = $(el).attr('src').replace('_normal', '');
+        var newsrc = $(el).attr('src').replace('_bigger', '');
         var newImage = new Image();
         newImage.src = newsrc;
         $('#user_data').hide();
@@ -1022,7 +1026,7 @@ function ShowUserOK(user){
     $('#user_bio').text(u.description);
     $('#user_link').attr('href', u.url);
     $('#user_link').text(u.url);
-    $('#user_photo').attr('src', u.profile_image_url);
+    $('#user_photo').attr('src', u.profile_image_url.replace('_normal', '_bigger'));
     $('#user_followers').text(u.followers_count);
     $('#user_following').text(u.friends_count);
     $('#user_tweets').text(u.statuses_count);
@@ -1052,7 +1056,7 @@ function ShowUserOK(user){
         txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this, event);">$2</a> ');
         txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
         txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
-        txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([Á«·ÈÌÛ˙˝¡…Õ”⁄›‡ËÏÚ˘¿»Ã“Ÿ„ıÒ‰ÎÔˆ¸ˇƒÀœ÷‹√’—‚ÍÓÙ˚¬ Œ‘€_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+        txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
         $('#user_update').html(txt);
         $('#user_update_data').text(data);
         $('#user_update_data').attr('href', 'http://twitter.com/'+u.screen_name+'/status/'+u.status.id+'');
@@ -1231,7 +1235,7 @@ $(document).ready(init);
   <div class="menu">
     <div id="load" class="load fr">
         <span id="load_result" class="fl"><script>html(Traduz('loading', '...'))</script></span>
-        <img id="load_image"src="img/load.gif" class="fl"/>†
+        <img id="load_image"src="img/load.gif" class="fl"/>
     </div>
 
     <div class="info dn">
@@ -1249,49 +1253,21 @@ $(document).ready(init);
     <button id="bmentions" onclick="LT.mentions();"><script>html(Traduz('mentions'))</script></button>
     <button id="bmessages" onclick="LT.messages();"><script>html(Traduz('messages'))</script></button>
     <button id="bfavorites" onclick="LT.favorites();"><script>html(Traduz('favorites'))</script></button>
-    <!--<button id="bfavorites" onclick="LT.favorites();"><img src="img/star_48.png" width="16" height="16"/></button>-->
-    <!--<button id="blistas" onclick="LT.more('listas');">Lists</button>-->
-    <button id="blists" onclick="LT.Lists()">Lists
-<!--
-        <select class="sel">
-            <option disabled="disabled">-</option>
-            <option>Google</option>
-            <option>Microsoft</option>
-            <option>WinThe7</option>
-        </select>
--->
-    </button>
-<style>
-.sel{
-  font-size:8pt;
-  border:none;
-  background:transparent;
-  -webkit-appearance:button;
-  margin:0;
-  padding:0;
-  color:#888;
-  cursor:pointer;
-}
-#submenu_lists button{
-  margin-right:3px;
-  margin-bottom:5px;
-}
-</style>
+    <button id="blists" onclick="LT.Lists()"><script>html(Traduz('lists'))</script></button>
  <!--
+    <button id="bfavorites" onclick="LT.favorites();"><img src="img/star_48.png" width="16" height="16"/></button>
     <button id="blistas" onclick="Controller().Insert('home', 3)">Page</button>
     <button id="bmore" onclick="LT.more('more');">More</button>
-    <button id="blistas" onclick="">Lists</button>
     <button id="bpainel" class="PainelButton fr" onclick="SwichPainel();" disabled="disabled"><img id="PainelSeta" class="dn"/></button>
 -->
-    <span class="fr">†</span>
     <img title="Configuration" class="pointer fr" onclick="Link(this, event, true);" src="img/conf.png"/>
   </div>
-  <div id="submenu_lists" class="submenu centro ">
-  </div>
-
+  
+  <div id="submenu_lists" class="submenu centro "></div>
+  	
   <div id="submenu_more" class="submenu centro dn">
-    <button id="botao_profile" onclick="QuickProfile();">Quick profile</button>††
-    <button id="botao_profile" onclick="AddPhoto();">Add Phtoo</button>††
+    <button id="botao_profile" onclick="QuickProfile();">Quick profile</button>
+    <button id="botao_profile" onclick="AddPhoto();">Add Phtoo</button>
   </div>
 
   <div class="timeline"><!-- TIMELINE> -->
@@ -1301,35 +1277,6 @@ $(document).ready(init);
     <input type="hidden" id="dm_user" value=""/>
     <textarea id="reply_text_update" onclick="Update();" onkeydown="Atalho(event, 'update', 'home')" onkeyup="Count('update', 'update')" class="t1"></textarea>
     <div id="update_co2" class="text2 dn">
-<!--
-      <div class="fl">
-<style type="text/css">
-.char{
-  width:10px;
-  height:10px;
-  display:inline-block;
-  border:1px solid #000;
-  color:#000;
-  margin:0;
-  padding:0;
-}
-
-
-</style>
-        <script type="text/javascript">
-var chars = '';
-for(i in EspecialChars){
-    var lay = '<span class="char">'+
-                  EspecialChars[i]+
-              '</span>';
-    chars += lay;
-}
-document.write(chars);
-        </script>
-      </div>
-<br />
--->
-
       <div class="short fl" title="Short a Link">
         <button onclick="ShortLink('update', 'update')"  class="button fl">
             <img src="img/link.png" height="16" />
@@ -1337,8 +1284,8 @@ document.write(chars);
         <input onfocus="ShowShortLink('update', 'update')" class="short_link_url fl" id="short_link_url_update" type="text" />
       </div>
       <br/><br/>
-      <button id="botao_update" onclick="doUpdate()" title="Done (Enter)"><script>html(Traduz('done'))</script></button>††
-      <button id="botao_share_update" onclick="SharePage('update', 'update')" title=""><script>html(Traduz('share_page'))</script></button>††
+      <button class="button_margin" id="botao_update" onclick="doUpdate()" title="Done (Enter)"><script>html(Traduz('done'))</script></button>
+      <button class="button_margin" id="botao_share_update" onclick="SharePage('update', 'update')" title=""><script>html(Traduz('share_page'))</script></button>
       <a id="botao_update_cancel" onclick="UpdateCancel()" title="Cancel" class="p8"><script>html(Traduz('cancel'))</script></a>
       <span id="count_update" class="p13">140</span>
       <span id="reply_status_update" class="state"></span>
@@ -1411,44 +1358,17 @@ document.write(chars);
     </div>
 
     <div id="show_lists" loaded="false" class="dn centro" style="padding-top:5px;width:250px;">
-        <span class="p12 oceania fl">Add Lists</span>
+        <span class="p12 oceania fl"><script>html(Traduz('add_list', true))</script></span>
         <div class="short" title="" style="padding-top:5px;width:250px;">
           <br />
-          <div id="show_lists_load" class="">
+          <div id="show_lists_load">
                 <img id="show_lists_load_image" class="fl" src="img/load.gif" />
                 <span class="fl" style="margin-left:5px;">
-                    Loading Lists...
+                    <script>html(Traduz('loading'))</script>
                 </span>
                 <br />
           </div>
-<style type="text/css">
-#show_lists_lists{
-    width:250px;
-}
-#show_lists_lists .list{
-    padding:3px;
-    border-radius:3px;
-    cursor:pointer;
-    border:1px solid #eee;
-    width:240px;
-    height:16px;
-    line-height:16px;
-    vertical-align:middle;
-}
-#show_lists_lists .list:hover{
-    background:#eee;
-}
-#show_lists_lists .list[disabled="disabled"]{
-    opacity:.3;
-    cursor:default;
-}
-#show_lists_lists .list[disabled="disabled"]:hover{
-    background:none;
-}
-</style>
-          <div id="show_lists_lists" class="dn">
-
-          </div>
+          <div id="show_lists_lists" class="dn"></div>
         </div>
     </div>
 
@@ -1489,7 +1409,7 @@ document.write(chars);
                <span><a id="user_uname" onclick="Link(this, event);"></a></span><br />
                <a class="cinza" onclick="Link(this, event);" id="user_local_link"><span id="user_local"></span></a><br />
                <span><script>html(Traduz('member_since'))</script>: <span id="user_since"></span></span><br />
-               <span id="user_follow">
+               <span id="user_follow" class="dn">
                  <script>html(Traduz('following_you',':'))</script>
                  <span id="following_re"></span>
                </span><br />

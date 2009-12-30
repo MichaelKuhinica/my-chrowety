@@ -93,5 +93,8 @@ var language = {
           "translate_tweets_to": "tweets Vertalen naar",
           "base_api": "Base API",
           "base_api_effect": "Base API alleen van kracht als u API Inloggen modus gebruikt",
+		  "lists": "Lijst",
+		  "add_list": "Lijst& toevoegen",
+		  "remove_list": "Verwijder Lijst& "		  
   }
 };
