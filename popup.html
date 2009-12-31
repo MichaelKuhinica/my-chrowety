@@ -54,7 +54,7 @@ function Scroll(event){
 var LT = {
     Auto:function(){
         if(db.pega('AbaAtiva')){
-          if(db.pega('AbaAtiva') == 'list'){
+          if(db.pega('AbaAtiva') == 'list' && Controller().tws.list[db.pega('ListAtiva')]){
 			if(!Controller().tws.list[db.pega('ListAtiva')].ativo){
 				LT.home();	
 			}else{
@@ -203,6 +203,7 @@ var LT = {
             'font-size': Controller().config.tweet_font_size,
             'text-shadow': Controller().config.tweet_shadow,
         });
+		$('.twets').css('height', Controller().config.popup_height);
     },
 
     home:function(){
@@ -238,6 +239,7 @@ var LT = {
             'font-size': Controller().config.tweet_font_size,
             'text-shadow': Controller().config.tweet_shadow,
         });
+		$('.twets').css('height', Controller().config.popup_height);
     },
     mentions:function(){
         var name = 'mentions';
@@ -272,6 +274,7 @@ var LT = {
             'font-size': Controller().config.tweet_font_size,
             'text-shadow': Controller().config.tweet_shadow,
         });
+		$('.twets').css('height', Controller().config.popup_height);
     },
     messages:function(){
         var name = 'messages';
@@ -306,6 +309,7 @@ var LT = {
             'font-size': Controller().config.tweet_font_size,
             'text-shadow': Controller().config.tweet_shadow,
         });
+		$('.twets').css('height', Controller().config.popup_height);
     },
     favorites:function(){
         var name = 'favorites';
@@ -341,6 +345,7 @@ var LT = {
             'font-size': Controller().config.tweet_font_size,
             'text-shadow': Controller().config.tweet_shadow,
         });
+		$('.twets').css('height', Controller().config.popup_height);
     }
 };
 
@@ -645,10 +650,12 @@ function Update(){
         }
         $("#reply_text_update").focus();
         $("#update_co2").slideDown("fast");
+		var height = parseInt(Controller().config.popup_height.split('px')[0]);
+		//var calc = parseInt(height-50);
 		if(!$('#submenu_lists').text()){
-			$('.twets').css('height', '400px');	
+			$('.twets').css('height', height-50+'px');	
 		}else{
-			$('.twets').css('height', '380px');
+			$('.twets').css('height', height-70+'px');
 		}
         
         LT.more(true);
@@ -658,7 +665,8 @@ function Update(){
 
 function UpdateCancel(){
   $('#update_co2').slideUp("fast", function(){
-     $('.twets').css('height', '450px');
+  	 var height = parseInt(Controller().config.popup_height.split('px')[0]);
+     $('.twets').css('height', height+50+'px');
      Count('update', 'update');
      $('#twets_update #reply_status_update').text('');
      $("#twets_update #reply_text_update").val(Slogan);

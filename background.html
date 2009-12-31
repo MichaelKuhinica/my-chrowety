@@ -13,6 +13,8 @@ var AuthMode = null;
 Current changelog:
     - Support twitter Lists
     - Change language in realtime
+    - Added option to change icon to a chromefied version
+    - Added option to change popup height (good for netbooks)
 */
 var OAuth = {
     consumer:{
@@ -281,11 +283,27 @@ function LoadLang(){
 }
 
 function Traduz(s, e, pl){
-	if(e === true){
-		return (language[language.id][s]).replace('& ', (pl?pl:language.plural_word)+' ');
+	if(language[language.id][s]){
+		if(e === true){
+			return (language[language.id][s]).replace('& ', (pl?pl:language.plural_word)+' ');
+		}else{
+			return (language[language.id][s]).replace('& ', ' ')+(e?e:'');	
+		}		
 	}else{
-		return (language[language.id][s]).replace('& ', ' ')+(e?e:'');	
+		return s;
 	}
+
+}
+
+function LoadIcon(){
+	var ico;
+	if(config.icone == 'chrome'){
+		ico = 'x19_chrome';		
+	}else{
+		ico = 'x19';
+	}
+	var pat = 'icones/'+ico+'.png';
+	chrome.browserAction.setIcon({path:pat});	
 }
 
 function LoadConfig(){
@@ -318,6 +336,12 @@ function LoadConfig(){
         if(!config.refresh.list){
             config.refresh.list = 5;
         }
+        if(!config.icone){
+            config.icone = 'normal';
+        }
+		if(!config.popup_height){
+			config.popup_height = '450px';			
+		}		
         db.salva('config', J2S(config));
         console.log(config);
     }else
@@ -327,6 +351,7 @@ function LoadConfig(){
     }
 
     tBase = config.base_api;
+	LoadIcon();
     LoadLang();
 }
 
@@ -435,8 +460,12 @@ function SaveCache(){
 }
 
 function CalculaApiRequests(){
-    var a = config.refresh;
-    var calc = (60/a.home) + (60/a.mentions) + (60/a.messages) + (60/a.favorites);
+    var a = config.refresh,li=0;
+	for(i in tws.list){
+		if(tws.list[i] && tws.list[i]._loaded) li++;
+	}
+	var list = (60/a.list) * li;
+    var calc = (60/a.home) + (60/a.mentions) + (60/a.messages) + (60/a.favorites) + list;
     calc = ((calc) + 4).toFixed();
     perc = ((calc / 150) * 100).toFixed();
     return {numero: calc, porcento: perc};
@@ -2077,7 +2106,7 @@ var Utils = {
                     txt = re.translation.replace('@ ', '@');
                     txt = re.translation.replace('# ', '#');
                     txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
-                    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+                    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
                     txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
 
                     try{

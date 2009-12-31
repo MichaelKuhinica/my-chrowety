@@ -95,6 +95,9 @@ var language = {
           "base_api_effect": "Base API only take effect if you are using API Login Mode",
 		  "lists": "Lists",
 		  "add_list": "Add List& ",
-		  "remove_list": "Remove List& "		  
+		  "remove_list": "Remove List& ",
+		  "icon": "Icon",
+		  "popup_height": "Popup Height",
+		  "new": "New"		  		  
   }
 };

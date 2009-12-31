@@ -95,6 +95,9 @@ var language = {
           "base_api_effect": "Base API alleen van kracht als u API Inloggen modus gebruikt",
 		  "lists": "Lijst",
 		  "add_list": "Lijst& toevoegen",
-		  "remove_list": "Verwijder Lijst& "		  
+		  "remove_list": "Verwijder Lijst& ",
+		  "icon": "Icon",
+		  "popup_height": "Popup Hoogte",
+		  "new": "Niew"		  
   }
 };

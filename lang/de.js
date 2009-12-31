@@ -95,6 +95,9 @@ var language = {
           "base_api_effect": "Base-API sind nur wirksam, wenn Sie API-Login-Modus",
 		  "lists": "Listen",
 		  "add_list": "Liste& hinzuf&uuml;gen",
-		  "remove_list": "Liste& entfernen"
+		  "remove_list": "Liste& entfernen",
+		  "icon": "Icon",
+		  "popup_height": "Popup Höhe",
+		  "new": "Neu"
   }
 };

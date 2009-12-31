@@ -8,6 +8,7 @@
 <script type="text/javascript" src="js/jquery.js"></script>
 <script type="text/javascript">
 /*<![CDATA[*/
+var config = {};
 var Controller = function(){return chrome.extension.getBackgroundPage()};
 function Traduz(s, e){
   return Controller().Traduz(s, e);
@@ -21,7 +22,6 @@ function J2S(obj){
 function S2J(str){
     return JSON.parse(str);
 }
-var config;
 
 function Toggle(el){
   if($(el).attr('active') == "false"){
@@ -33,6 +33,21 @@ function Toggle(el){
         $($('fieldset div')[i]).slideUp();
     });
   }
+}
+
+function ChangeIcon(to){
+	var ico;
+	if(to == 'chrome'){
+		ico = 'x19_chrome';
+		Controller().config.icone = 'chrome';		
+	}else{
+		ico = 'x19';
+		Controller().config.icone = 'normal';
+	}
+	var pat = 'icones/'+ico+'.png';
+	chrome.browserAction.setIcon({path:pat});
+    config = J2S(Controller().config);
+    db.salva('config', config);		
 }
 
 function getByValue(selectId, value){
@@ -87,6 +102,7 @@ function LoadConfig(){
     SelectOption('alerts', config.alerts);
     SelectOption('alerts_max', config.alerts_max);
     SelectOption('tweet_font_size', config.tweet_font_size);
+	SelectOption('popup_height', config.popup_height);
     SelectOption('tweet_shadow', config.tweet_shadow);
     SelectOption('link_in_bg', config.link_in_bg);
     SelectOption('home_tweets_page', config.start_count.home);
@@ -101,12 +117,15 @@ function LoadConfig(){
 }
 
 function SaveConfig(){
+	config = db.pega('config') ? S2J(db.pega('config')) : Controller().DefaultConfig;
+	
     config.language             = GetValue('language');
     config.translate_tweets_to  = GetValue('translate_tweets_to');
     config.url_shortener        = GetValue('url_shortener');
     config.alerts               = GetValue('alerts');
     config.alerts_max           = GetValue('alerts_max');
     config.tweet_font_size      = GetValue('tweet_font_size');
+	config.popup_height      	= GetValue('popup_height');
     config.tweet_shadow         = GetValue('tweet_shadow');
     config.link_in_bg           = GetValue('link_in_bg');
     config.start_count.home     = GetValue('home_tweets_page');
@@ -117,10 +136,9 @@ function SaveConfig(){
     config.refresh.messages     = GetValue('messages_refresh_time');
 
     config.twitter_question     = $('#twitter_question').val();
-    config.base_api     = $('#base_api').val();
+    config.base_api     		= $('#base_api').val();
 
-    config = J2S(config);
-    db.salva('config', config);
+    db.salva('config', J2S(config));
     Controller().ReLoadConfig();
     location.reload();
 }
@@ -161,7 +179,7 @@ $(document).ready(init);
 			<span class="button_margin"></span>
             <label><script>html(Traduz('refresh_time'))</script>
               <select id="home_refresh_time">
-              	<option value="1">1 <script>html(Traduz('minutes'))</script></option>
+              	<option value="1">2 <script>html(Traduz('minutes'))</script></option>
                 <option value="3">3 <script>html(Traduz('minutes'))</script></option>
                 <option value="5">5 <script>html(Traduz('minutes'))</script></option>
                 <option value="8">8 <script>html(Traduz('minutes'))</script></option>
@@ -335,6 +353,22 @@ $(document).ready(init);
               </select>
             </label>
             <br /><br />
+            <label><script>html(Traduz('popup_height'))</script>
+              <select id="popup_height">
+                <option value="200px">200px</option>
+                <option value="250px">250px</option>
+				<option value="300px">300px</option>
+                <option value="350px">350px</option>
+				<option value="400px">400px</option>
+                <option value="450px">450px</option>
+				<!--
+                <option value="550px">550px</option>
+                <option value="650px">650px</option>
+                <option value="750px">750px</option>
+              	-->
+			  </select>
+            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+            <br /><br />			
             <label><script>html(Traduz('tweet_font_size'))</script>
               <select id="tweet_font_size">
                 <option value="5pt">5pt</option>
@@ -366,9 +400,13 @@ $(document).ready(init);
             <label><script>html(Traduz('twitter_question'))</script>
               <input id="twitter_question" type="text" value="" size="24" />
             </label> <a title="" class="p8" onclick="ResetSlogan()"><script>html(Traduz('reset2'))</script></a>
-
-
+			
             <br /><br />
+			<label style="vertical-align:middle"><script>html(Traduz('icon'))</script>
+			 	<img onclick="ChangeIcon('chrome');" src="icones/x19_chrome.png" style="margin-top:-2px;" class="fr pointer">
+             	<img onclick="ChangeIcon('normal');" src="icones/x19.png" style="margin-top:-2px;" class="fr pointer">
+				<br>
+            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
            </div>
         </fieldset>
 
@@ -407,9 +445,8 @@ $(document).ready(init);
 </div>
 <br />
 <div class="rodape reflect clip">
-    <span class="version">Chrowety <script>html(db.pega('version'))</script></span>
-    <br />
-    <span class="autor"><a href="http://twitter.com/vjnrv" target="_blank" style="color:#333;">Pedro Junior</a></span>
+	<br>
+    <span class="version"><a href="http://twitter.com/chrowety" target="_blank" style="color:#333;">Chrowety <script>html(db.pega('version'))</script></a></span>
 </div>
 </body>
 </html>
