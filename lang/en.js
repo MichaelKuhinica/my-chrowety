@@ -1,6 +1,8 @@
 var language = {
   "name": "English",
   "author": "Pedro Junior",
+  "email": "v.ju.ni.or.v",
+  "date": "24/12/09",
   "id": "en",
   "charset": "UTF-8",
   "plural_word": "s",
@@ -98,6 +100,14 @@ var language = {
 		  "remove_list": "Remove List& ",
 		  "icon": "Icon",
 		  "popup_height": "Popup Height",
-		  "new": "New"		  		  
+		  "new": "New",
+          "reload_lists": "Reload Lists",
+          "no_lists_found": "No Lists found",
+          "show_username_in_tweets": "Show username in tweets",
+          "follow": "Follow",
+          "unfollow": "Unfollow",
+          "expand": "Expand",
+          "contract": "Contract",
+          "conversation": "Conversation"
   }
 };

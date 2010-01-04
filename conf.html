@@ -23,11 +23,16 @@ function S2J(str){
     return JSON.parse(str);
 }
 
-function Toggle(el){
+function Toggle(el, noSlide){
   if($(el).attr('active') == "false"){
+    db.salva('conf_guia', $(el)[0].id);
     $('fieldset').each(function(i,n){
         if($(el)[0] == n){
-          $('div', $(el)).slideDown();
+          if(noSlide){
+            $('div', $(el)).show();
+          }else{
+            $('div', $(el)).slideDown();
+          }
           return;
         }
         $($('fieldset div')[i]).slideUp();
@@ -39,7 +44,10 @@ function ChangeIcon(to){
 	var ico;
 	if(to == 'chrome'){
 		ico = 'x19_chrome';
-		Controller().config.icone = 'chrome';		
+		Controller().config.icone = 'chrome';
+	}else if(to == 'chrome2'){
+		ico = 'x19_chrome2';
+		Controller().config.icone = 'chrome2';
 	}else{
 		ico = 'x19';
 		Controller().config.icone = 'normal';
@@ -105,6 +113,7 @@ function LoadConfig(){
 	SelectOption('popup_height', config.popup_height);
     SelectOption('tweet_shadow', config.tweet_shadow);
     SelectOption('link_in_bg', config.link_in_bg);
+	SelectOption('show_username', config.show_username);
     SelectOption('home_tweets_page', config.start_count.home);
     SelectOption('home_refresh_time', config.refresh.home);
     SelectOption('mentions_tweets_page', config.start_count.mentions);
@@ -128,6 +137,7 @@ function SaveConfig(){
 	config.popup_height      	= GetValue('popup_height');
     config.tweet_shadow         = GetValue('tweet_shadow');
     config.link_in_bg           = GetValue('link_in_bg');
+	config.show_username        = GetValue('show_username');
     config.start_count.home     = GetValue('home_tweets_page');
     config.refresh.home         = GetValue('home_refresh_time');
     config.start_count.mentions = GetValue('mentions_tweets_page');
@@ -146,7 +156,15 @@ function init(){
     document.title = Traduz('configuration')+' - Chrowety';
     LoadConfig();
     document.charset = Controller().language.charset;
-    Toggle($('#main'));
+    if(db.pega('conf_guia')){
+        try{
+            Toggle($('#'+db.pega('conf_guia')), true);
+        }catch(e){
+            Toggle($('#main'), true);
+        }
+    }else{
+        Toggle($('#main'), true);
+    }
 }
 $(document).ready(init);
 /*]]>*/
@@ -293,6 +311,8 @@ $(document).ready(init);
                 <option value="es">Espa&ntilde;ol</option>
                 <option value="de">German</option>
                 <option value="nl">Dutch</option>
+				<option value="cz">Czech</option>
+				<option value="ru">Russian</option>
               </select>
             </label>
             <br /><br />
@@ -368,6 +388,14 @@ $(document).ready(init);
               	-->
 			  </select>
             </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+			<br /><br />
+            <label><script>html(Traduz('show_username_in_tweets'))</script>
+              <select id="show_username">
+                <option value="true"><script>html(Traduz('yes'))</script></option>
+                <option value="false"><script>html(Traduz('no'))</script></option>
+              </select>
+            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+			
             <br /><br />			
             <label><script>html(Traduz('tweet_font_size'))</script>
               <select id="tweet_font_size">
@@ -403,6 +431,7 @@ $(document).ready(init);
 			
             <br /><br />
 			<label style="vertical-align:middle"><script>html(Traduz('icon'))</script>
+			 	<img onclick="ChangeIcon('chrome2');" src="icones/x19_chrome2.png" style="margin-top:-2px;" class="fr pointer">
 			 	<img onclick="ChangeIcon('chrome');" src="icones/x19_chrome.png" style="margin-top:-2px;" class="fr pointer">
              	<img onclick="ChangeIcon('normal');" src="icones/x19.png" style="margin-top:-2px;" class="fr pointer">
 				<br>

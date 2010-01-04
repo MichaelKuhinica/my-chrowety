@@ -1,6 +1,8 @@
 var language = {
   "name": "Português (Brasil)",
   "author": "Pedro Junior",
+  "email": "v.ju.ni.or.v",
+  "date": "24/12/09",
   "id": "pt_br",
   "charset": "iso-8859-1",
   "plural_word": "s",
@@ -93,11 +95,19 @@ var language = {
           "translate_tweets_to": "Traduzir tweets para",
           "base_api": "Base da API",
           "base_api_effect": "A Base da API só muda se você tiver usando o Modo de Login via API",
-		  "lists": "Listas",
-		  "add_list": "Adicionar Lista& ",
-		  "remove_list": "Remover Lista& ",
-		  "icon": "Icone",
-		  "popup_height": "Altura do Popup",
-		  "new": "Novo"
+    	  "lists": "Listas",
+    	  "add_list": "Adicionar Lista& ",
+    	  "remove_list": "Remover Lista& ",
+    	  "icon": "Icone",
+    	  "popup_height": "Altura do Popup",
+          "new": "Novo",
+          "reload_lists": "Atualizar Listas",
+          "no_lists_found": "Nenhuma Lista encontrada",
+          "show_username_in_tweets": "Mostrar username nos tweets",
+          "follow": "Seguir",
+          "unfollow": "Parar de Seguir",
+          "expand": "Expandir",
+          "contract": "Contrair",
+          "conversation": "Conversação"
   }
 };

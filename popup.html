@@ -3,7 +3,9 @@
 <head>
 <meta charset="">
 <link type="text/css" rel="stylesheet" href="css/base.css" />
+<link type="text/css" rel="stylesheet" href="css/tipsy.css" />
 <script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/jquery.tipsy.js"></script>
 <script type="text/javascript">
 var gid = function(i){return document.getElementById(i);}
 var Controller = function(){return chrome.extension.getBackgroundPage()};
@@ -52,8 +54,9 @@ function Scroll(event){
 }
 
 var LT = {
-    Auto:function(){
+    Auto:function(){	
         if(db.pega('AbaAtiva')){
+		  LT.Unreads();
           if(db.pega('AbaAtiva') == 'list' && Controller().tws.list[db.pega('ListAtiva')]){
 			if(!Controller().tws.list[db.pega('ListAtiva')].ativo){
 				LT.home();	
@@ -67,6 +70,24 @@ var LT = {
           LT.home();
         }
     },
+
+	ClearUnreads:function(name){
+		$('#b'+name).attr('count', Controller().tws.mentions.new_count);
+		$('#b'+name).blur();
+	},
+	
+	Unreads:function(){
+		 var tws = Controller().tws;
+		 //$('#bhome').blur();
+		 //$('#bmetions').blur();
+		 //$('#bmessages').blur(); 		 
+		 $('#bhome').attr('count', tws.home.new_count).tipsy();
+		 $('#bmentions').attr('count', tws.mentions.new_count).tipsy();
+		 $('#bmessages').attr('count', tws.messages.new_count).tipsy();
+		 $('#bhome').hover();
+		 $('#bmentions').hover();
+		 $('#bmessages').hover();
+	},
 
     more:function(name, hide, show){
         //var name = 'more';
@@ -87,18 +108,22 @@ var LT = {
         if(Controller().tws.lists && Controller().tws.lists.names){
             $('#submenu_lists').empty();
             nomes = Controller().tws.lists.names;
-            for(i=0; i < nomes.length; i++){
+			var button = null, new_count=0;
+            for(i=nomes.length-1; i >= 0; i--){
                 if(!Controller().tws.list[nomes[i]].ativo){
                     continue;
                 }
-                var button = document.createElement('button');
+                	button = document.createElement('button');
                     button.id = 'b'+nomes[i];
                     button.innerText = nomes[i];
                     button.setAttribute('list', nomes[i]);
                     button.onclick = function(){
                         LT.list(this.getAttribute('list'));
                     };
-                    $('#submenu_lists').append(button);
+					$('#submenu_lists').append(button);
+					new_count = Controller().tws.list[nomes[i]].new_count ? Controller().tws.list[nomes[i]].new_count : 0;
+					$('#b'+nomes[i]).attr('count', new_count).tipsy();
+					$('#b'+nomes[i]).hover();					            
             }
             LT.more('lists', null, true);
             LT.Auto();
@@ -134,16 +159,26 @@ var LT = {
         LT.initLists();
     },
 
-    Lists:function(nomes){
+    Lists:function(force){
         $('#user_info').hide();
         ShowPopup();
         $('#show_lists').show();
 
-        if(!Controller().tws.lists.loaded){
+        if(force){
+            $('#show_lists_lists').empty();
+            $('#show_lists_load').show();
+            $('#show_lists_lists').hide();
+            $('#show_lists').attr('loaded', "false");
             Controller().Chrowety.Lists('LT.Lists()');
+            return false;
         }
 
-        if(Controller().tws.lists.loaded && $('#show_lists').attr('loaded') != "true"){
+        if(Controller().tws.lists && !Controller().tws.lists.loaded){
+            Controller().Chrowety.Lists('LT.Lists()');
+            return false;
+        }
+
+        if(Controller().tws.lists && Controller().tws.lists.loaded && $('#show_lists').attr('loaded') != "true"){
             nomes = Controller().tws.lists.names;
             fnomes = Controller().tws.lists.full_names;
             var i = 0;
@@ -153,14 +188,12 @@ var LT = {
                 var lay =
                 '<div onclick="LT.loadList(this.getAttribute(\'list\'));" title="'+dn_title+'" id="lists_'+nomes[i]+'" list="'+nomes[i]+'" class="list '+dn_ok+'">'+
                     '<span class="fl">'+fnomes[i]+'</span>'+
-                    //'<span class="fr '+dn_ok+'" id="show_lists_ok_'+nomes[i]+'"><img src="img/+.png"/></span>'+
-                    //'<span class="fr '+dn_cancel+'" id="show_lists_cancel_'+nomes[i]+'"><img src="img/-.png"/></span>'+
                     '<span class="fr dn" id="show_lists_load_'+nomes[i]+'"><img src="img/load.gif" /></span>'+
                 '</div>';
                 $('#show_lists_lists').append(lay);
             }
             if(i == 0){
-                $('#show_lists_lists').append('No Lists found.');
+                $('#show_lists_lists').append(Traduz('no_lists_found'));
             }
             $('#show_lists_load').hide();
             $('#show_lists_lists').show();
@@ -198,19 +231,26 @@ var LT = {
         $('#twets_list')[0].scrollTop = Controller().tws.list[name].scroll;
         $('#twets_list').bind("scroll", {lista:name}, Scroll);
         $('#load').hide();
+        LT.ClearUnreads(name);
         window.setTimeout("Controller().ClearUnreads('"+name+"')", 500);
+        LT.UISets();
+    },
+
+	UISets:function(){
         $('.texwt').css({
             'font-size': Controller().config.tweet_font_size,
             'text-shadow': Controller().config.tweet_shadow,
         });
 		$('.twets').css('height', Controller().config.popup_height);
-    },
-
+		if(Controller().config.show_username =='true'){$('.tweets_names').show()}		
+	},
+	
     home:function(){
         var name = 'home';
         var loaded = Controller().Chrowety[name]._loaded;
         if(!loaded){
           Controller().Chrowety[name].scroll = 0;
+          Controller().Chrowety[name].Run('LT.'+name+'()');
           return false;
         }
         db.salva('AbaAtiva', name);
@@ -234,18 +274,16 @@ var LT = {
         $('#twets_'+name)[0].scrollTop = Controller().Chrowety[name].scroll;
         $('#twets_'+name).bind("scroll", {lista:name}, Scroll);
         $('#load').hide();
-        window.setTimeout("Controller().ClearUnreads('"+name+"')", 500);
-        $('.texwt').css({
-            'font-size': Controller().config.tweet_font_size,
-            'text-shadow': Controller().config.tweet_shadow,
-        });
-		$('.twets').css('height', Controller().config.popup_height);
+        LT.ClearUnreads(name);
+		window.setTimeout("Controller().ClearUnreads('"+name+"')", 500);
+		LT.UISets();
     },
     mentions:function(){
         var name = 'mentions';
         var loaded = Controller().Chrowety[name]._loaded;
         if(!loaded){
           Controller().Chrowety[name].scroll = 0;
+          Controller().Chrowety[name].Run('LT.'+name+'()');
           return false;
         }
         db.salva('AbaAtiva', name);
@@ -269,18 +307,16 @@ var LT = {
         $('#twets_'+name)[0].scrollTop = Controller().Chrowety[name].scroll;
         $('#twets_'+name).bind("scroll", {lista:name}, Scroll);
         $('#load').hide();
+        LT.ClearUnreads(name);
         window.setTimeout("Controller().ClearUnreads('"+name+"')", 1000);
-        $('.texwt').css({
-            'font-size': Controller().config.tweet_font_size,
-            'text-shadow': Controller().config.tweet_shadow,
-        });
-		$('.twets').css('height', Controller().config.popup_height);
+        LT.UISets();
     },
     messages:function(){
         var name = 'messages';
         var loaded = Controller().Chrowety[name]._loaded;
         if(!loaded){
           Controller().Chrowety[name].scroll = 0;
+          Controller().Chrowety[name].Run('LT.'+name+'()');
           return false;
         }
         db.salva('AbaAtiva', name);
@@ -304,18 +340,16 @@ var LT = {
         $('#twets_'+name)[0].scrollTop = Controller().Chrowety[name].scroll;
         $('#twets_'+name).bind("scroll", {lista:name}, Scroll);
         $('#load').hide();
+        LT.ClearUnreads(name);
         window.setTimeout("Controller().ClearUnreads('"+name+"')", 1000);
-        $('.texwt').css({
-            'font-size': Controller().config.tweet_font_size,
-            'text-shadow': Controller().config.tweet_shadow,
-        });
-		$('.twets').css('height', Controller().config.popup_height);
+        LT.UISets();
     },
     favorites:function(){
         var name = 'favorites';
         var loaded = Controller().Chrowety[name]._loaded;
         if(!loaded){
           Controller().Chrowety[name].scroll = 0;
+          Controller().Chrowety[name].Run('LT.'+name+'()');
           return false;
         }
         Controller().Chrowety[name].pagina = 1;
@@ -340,12 +374,9 @@ var LT = {
         $('#twets_'+name)[0].scrollTop = Controller().Chrowety[name].scroll;
         $('#twets_'+name).bind("scroll", {lista:name}, Scroll);
         $('#load').hide();
+        LT.ClearUnreads(name);
         window.setTimeout("Controller().ClearUnreads('"+name+"')", 1000);
-        $('.texwt').css({
-            'font-size': Controller().config.tweet_font_size,
-            'text-shadow': Controller().config.tweet_shadow,
-        });
-		$('.twets').css('height', Controller().config.popup_height);
+        LT.UISets();
     }
 };
 
@@ -381,13 +412,13 @@ function LoadProfile(){
 }
 
 String.prototype.replaceAll = function(strTarget,strSubString){
-  var strText = this;
-  var intIndexOfMatch = strText.indexOf( strTarget );
-  while (intIndexOfMatch != -1){
-    strText = strText.replace(strTarget,strSubString )
-    intIndexOfMatch = strText.indexOf(strTarget);
-  }
-  return(strText);
+    var strText = this;
+    var intIndexOfMatch = strText.indexOf(strTarget);
+    while(intIndexOfMatch != -1){
+      strText = strText.replace(strTarget,strSubString)
+      intIndexOfMatch = strText.indexOf(strTarget);
+    }
+    return(strText);
 }
 
 function RefreshResult(n, time){
@@ -397,13 +428,20 @@ function RefreshResult(n, time){
       ' '+Traduz('new_tweet').replaceAll("& ", ' ');
       $('#new_twets_'+time).fadeIn();
       $('#new_twets_'+time).text(n+t);
+	  LT.Unreads();
     }
 }
 
-function RefreshTweets(time){
-    $('#new_twets_'+time).fadeOut();
-    eval('LT.'+time+'()');
+function RefreshTweets(time, list){
+    if(list){
+        $('#new_twets_list').fadeOut();
+        eval('LT.list('+time+')');
+    }else{
+        $('#new_twets_'+time).fadeOut();
+        eval('LT.'+time+'()');
+    }
     Controller().ClearUnreads();
+    //LT.ClearUnreads(time);
 }
 
 function RefreshLimit(n){
@@ -448,8 +486,6 @@ function ShowMoreOK(old, timeline, list){
         $('#twets_'+timeline).append(old);
         SearchData();
         if(list){
-            //$('<div id="showMore_link_list" class="show_more" onclick="ShowMore(\''+name+'\', true)" title="'+Traduz('show_more')+'">'+Traduz('show_more')+'</div>');
-            //                           $('<div id="showMore_link_list" class="show_more" onclick="ShowMore(\''+name+'\', true)" title="'+Traduz('show_more')+'">'+Traduz('show_more')+'</div>');
             $('#twets_'+timeline).append($('<div id="showMore_link_list" class="show_more" onclick="ShowMore(\''+list+'\', true)" title="'+Traduz('show_more')+'">'+Traduz('show_more')+'</div>'));
         }else{
             $('#twets_'+timeline).append($('<div id="showMore_link_'+timeline+'" class="show_more" onclick="ShowMore(\''+timeline+'\')" title="'+Traduz('show_more')+'">'+Traduz('show_more')+'</div>'));
@@ -591,7 +627,7 @@ function Atalho(evt, tid, tm) {
                     //ReplyCancel(tid, tm);
                     //$('#botao_'+tid+'_cancel').click();
                 }
-                evt.returnValue=false;
+                //evt.returnValue=false;
                 break;
     }
   }else{
@@ -779,7 +815,7 @@ function ShortLink(tid, time){
 function ShortLinkOK(tid, time, url){
     $('#twets_'+time+' #short_link_url_'+tid).val(Traduz('ok', '!'));
     $('#twets_'+time+' #reply_text_'+tid).focus();
-    $('#twets_'+time+' #reply_text_'+tid).val($('#twets_'+time+' #reply_text_'+tid).val()+' '+url+' ');
+    $('#twets_'+time+' #reply_text_'+tid).val($('#twets_'+time+' #reply_text_'+tid).val()+''+url+' ');
     Count(tid, time);
     HideShortLink(tid, time);
 }
@@ -1257,14 +1293,12 @@ $(document).ready(init);
         <a id="SeguindoLink" class="cinza p8" onclick="Link(this, event);"><span id="seguindo"></span></a> | <a id="SeguidoresLink" class="cinza p8" onclick="Link(this, event);"><span id="seguidores"></span></a>
       </span>
     </div>
-    <button id="bhome" onclick="LT.home();"><script>html(Traduz('home'))</script></button>
+    <button class="alerta" alerta="true" id="bhome" onclick="LT.home();"><script>html(Traduz('home'))</script></button>
     <button id="bmentions" onclick="LT.mentions();"><script>html(Traduz('mentions'))</script></button>
     <button id="bmessages" onclick="LT.messages();"><script>html(Traduz('messages'))</script></button>
     <button id="bfavorites" onclick="LT.favorites();"><script>html(Traduz('favorites'))</script></button>
     <button id="blists" onclick="LT.Lists()"><script>html(Traduz('lists'))</script></button>
  <!--
-    <button id="bfavorites" onclick="LT.favorites();"><img src="img/star_48.png" width="16" height="16"/></button>
-    <button id="blistas" onclick="Controller().Insert('home', 3)">Page</button>
     <button id="bmore" onclick="LT.more('more');">More</button>
     <button id="bpainel" class="PainelButton fr" onclick="SwichPainel();" disabled="disabled"><img id="PainelSeta" class="dn"/></button>
 -->
@@ -1279,7 +1313,6 @@ $(document).ready(init);
   </div>
 
   <div class="timeline"><!-- TIMELINE> -->
-
   <div id="twets_update" class="update">
     <input type="hidden" id="update_type" value="update"/>
     <input type="hidden" id="dm_user" value=""/>
@@ -1330,7 +1363,7 @@ $(document).ready(init);
       </div>
 
       <div id="tcon_list" class="twets_con dn">
-        <div id="new_twets_list" class="new_twets dn" onclick="RefreshTweets('list')"></div>
+        <div id="new_twets_list" class="new_twets dn" onclick="RefreshTweets(this.parentNode.getAttribute('lista'), true)"></div>
         <div id="twets_list" class="twets">
             <div class="tload"><img src="img/load.gif" /></div>
         </div>
@@ -1359,16 +1392,18 @@ $(document).ready(init);
         <br /><br />
         <object width="300" height="219" class="cb">
           <param id="youtube_param" name="movie" value="" />
-          <param name="allowFullScreen" value="false" />
+          <param name="allowFullScreen" value="true" />
           <param name="allowscriptaccess" value="always" />
-          <embed id="youtube_embed" src="" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="false" width="300" height="219" />
+          <embed id="youtube_embed" src="" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="300" height="219" />
         </object>
     </div>
 
     <div id="show_lists" loaded="false" class="dn centro" style="padding-top:5px;width:250px;">
         <span class="p12 oceania fl"><script>html(Traduz('add_list', true))</script></span>
-        <div class="short" title="" style="padding-top:5px;width:250px;">
-          <br />
+        <div class="short" style="padding-top:5px;width:250px;">
+          <div class="opts">
+            <a onclick="LT.Lists(true);"><script>html(Traduz('reload_lists'))</script></a>
+          </div>
           <div id="show_lists_load">
                 <img id="show_lists_load_image" class="fl" src="img/load.gif" />
                 <span class="fl" style="margin-left:5px;">
@@ -1377,6 +1412,14 @@ $(document).ready(init);
                 <br />
           </div>
           <div id="show_lists_lists" class="dn"></div>
+<!--
+          <br />
+          <div class="opts">
+            <button onclick="doQuickProfile();" class="button fl" style="line-height:1.2em"><script>html(Traduz('username'))</script></button>
+            <input class="fl" id="quick_profile_name" type="text" />
+          </div>
+          <br /><br />
+-->
         </div>
     </div>
 
@@ -1425,37 +1468,49 @@ $(document).ready(init);
           </span>
         </div>
         <div id="user_rest">
-        <br />
-        <div id="user_bio_div" class="cb">
-            <span><a id="user_link" href="" onclick="Link(this, event)"></a></span><br />
-            <span id="user_bio"></span>
-            <br /><br />
-        </div>
-        <div class="centro" style="border-top:1px solid #ddd;border-bottom:1px solid #ddd;">
-            <span class="centro inblock" style="width:70px">
-              <span id="user_followers"></span>
-              <br />
-              <span><script>html(Traduz('followers'))</script></span>
-            </span>
+	        <br />
+	        <div id="user_bio_div" class="cb">
+	            <span><a id="user_link" href="" onclick="Link(this, event)"></a></span><br />
+	            <span id="user_bio"></span>
+	            <br /><br />
+	        </div>
+	        <div class="centro" style="border-top:1px solid #ddd;border-bottom:1px solid #ddd;">
+	            <span class="centro inblock" style="width:70px">
+	              <span id="user_followers"></span>
+	              <br />
+	              <span><script>html(Traduz('followers'))</script></span>
+	            </span>
+	
+	            <span class="centro inblock" style="width:70px">
+	              <span id="user_following"></span>
+	              <br />
+	              <span><script>html(Traduz('following'))</script></span>
+	            </span>
+	
+	            <span class="centro inblock" style="width:70px">
+	              <span id="user_tweets"></span>
+	              <br />
+	              <span><script>html(Traduz('tweets'))</script></span>
+	            </span>
 
-            <span class="centro inblock" style="width:70px">
-              <span id="user_following"></span>
-              <br />
-              <span><script>html(Traduz('following'))</script></span>
-            </span>
-
-            <span class="centro inblock" style="width:70px">
-              <span id="user_tweets"></span>
-              <br />
-              <span><script>html(Traduz('tweets'))</script></span>
-            </span>
-        </div>
-        <div id="user_update_div" class="dn">
-            <br /><br />
-            <b><script>html(Traduz('last_update'))</script>: </b>
-            <span id="user_update"></span><br />
-            <span class="p8 cinza"><a class="p8 cinza" id="user_update_data" onclick="Link(this, event);"></a><span id="user_update_via"></span></span>
-        </div>
+	            <span class="centro inblock dn" style="width:70px">
+	              <span id="user_lists"></span>
+	              <br />
+	              <span><script>html(Traduz('lists'))</script></span>
+	            </span>				
+	        </div>
+	        <div id="user_update_div" class="dn">
+	            <br /><br />
+	            <b><script>html(Traduz('last_update'))</script>: </b>
+	            <span id="user_update"></span><br />
+	            <span class="p8 cinza"><a class="p8 cinza" id="user_update_data" onclick="Link(this, event);"></a><span id="user_update_via"></span></span>
+	        </div>
+			<br>
+			<div id="user_options_div" class="user_profile_options dn">
+				<span class="user_opt r_bl r_tl">Follow</span>
+				<span class="user_opt">Unfollow</span>
+				<span class="user_opt">Add To List</span>	
+			</div>
         </div>
     </div>
   </div>

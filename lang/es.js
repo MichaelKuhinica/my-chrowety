@@ -1,6 +1,8 @@
 var language = {
   "name": "Español",
   "author": "jp_armstrong",
+  "email": "",
+  "date": "24/12/09",
   "id": "es",
   "charset": "iso-8859-1",
   "plural_word": "s",
@@ -98,6 +100,14 @@ var language = {
 		  "remove_list": "Eliminar Lista& ",
 		  "icon": "Icono",
 		  "popup_height": "Altura Popup",
-		  "new": "Nuevo"
+		  "new": "Nuevo",
+          "reload_lists": "Reload Lists",
+          "no_lists_found": "No Lists found",
+          "show_username_in_tweets": "Show username in tweets",
+          "follow": "Follow",
+          "unfollow": "Unfollow",
+          "expand": "Expand",
+          "contract": "Contract",
+          "conversation": "Conversation"
   }
 };

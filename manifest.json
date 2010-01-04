@@ -27,6 +27,6 @@
    },
    "name": "Chrowety",
    "description": "A twitter client for Google Chrome",
-   "version": "1.6.987",
+   "version": "1.7.0.1",
    "update_url": "http://clients2.google.com/service/update2/crx"
 }

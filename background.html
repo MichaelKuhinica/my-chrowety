@@ -11,10 +11,7 @@ var AuthMode = null;
 
 /*
 Current changelog:
-    - Support twitter Lists
-    - Change language in realtime
-    - Added option to change icon to a chromefied version
-    - Added option to change popup height (good for netbooks)
+    - Added another icon option
 */
 var OAuth = {
     consumer:{
@@ -159,6 +156,8 @@ var api = {
     destroyDM:function(id){return  tBase+ '/direct_messages/destroy/'+id+'.json'    },
     favorite:function(id){return   tBase+ '/favorites/create/'+id+'.json'           },
     unfavorite:function(id){return tBase+ '/favorites/destroy/'+id+'.json'          },
+    follow:function(id){return     tBase+ '/friendships/create/'+id+'.json'         },
+    unfollow:function(id){return   tBase+ '/friendships/destroy/'+id+'.json'        },	
     lists:function(user){return    tBase+ '/'+user+'/lists.json'                    },
     list:function(user,lid){return tBase+ '/'+user+'/lists/'+lid+'/statuses.json'   },
 
@@ -225,28 +224,28 @@ var tws = {
       last:0,
       new_count:0,
       tweets:[],
-      tw:[],
+      tw:[]
     },
     mentions:{
       total:0,
       last:0,
       new_count:0,
       tweets:[],
-      tw:[],
+      tw:[]
     },
     messages:{
       total:0,
       last:0,
       new_count:0,
       tweets:[],
-      tw:[],
+      tw:[]
     },
     favorites:{
       total:0,
       last:0,
       new_count:0,
       tweets:[],
-      tw:[],
+      tw:[]
     },
     lists:{
       loaded:false,
@@ -255,14 +254,6 @@ var tws = {
       names:[],
       lists:[]
     },
-/*
-    list:{
-      total:0,
-      last:0,
-      new_count:0,
-      tweets:[],
-    },
-*/
     list:[],
 };
 
@@ -276,7 +267,7 @@ function LoadLang(){
         Ll.src  = 'lang/'+lg+'.js';
         Ll.id   = 'language';
     document.head.appendChild(Ll);
-
+	language.slogan_bak = language.slogan;
     //$('#language').attr('charset', language.charset);
     //$('#language').attr('src', 'lang/'+lg+'.js');
     console.log('LoadLang() > '+lg);
@@ -298,7 +289,9 @@ function Traduz(s, e, pl){
 function LoadIcon(){
 	var ico;
 	if(config.icone == 'chrome'){
-		ico = 'x19_chrome';		
+		ico = 'x19_chrome';
+	}else if(config.icone == 'chrome2'){
+        ico = 'x19_chrome2';
 	}else{
 		ico = 'x19';
 	}
@@ -341,6 +334,9 @@ function LoadConfig(){
         }
 		if(!config.popup_height){
 			config.popup_height = '450px';			
+		}
+		if(!config.show_username){
+			config.show_username = "false";
 		}		
         db.salva('config', J2S(config));
         console.log(config);
@@ -382,6 +378,9 @@ var DefaultConfig = {
     tweet_shadow: "false",
     twitter_question: false,
     link_in_bg: "false",
+	icone: 'normal',
+	popup_height: '450px',
+	show_username: "false",
     alerts: "true",
     alerts_max:5,
     start_count:{
@@ -737,7 +736,7 @@ var Chrowety = {
           };
           Login.erro = function(){
               if(AuthMode == "OAuth"){
-
+                    Chrowety.login();
               }else{
                 Popup().LoginStatus(Traduz('login_failed', '...'));
                 console.log('Chrowety.login() > FAIL');
@@ -945,6 +944,7 @@ var Chrowety = {
 
     fav_active:false,
     favorite:function(tid, time){
+      console.log('favorite: '+tid+' - '+time);
       Chrowety.fav_active = true;
       var fav = new Request(api.favorite(tid), 'post');
           fav.sucesso = function(){
@@ -1008,6 +1008,9 @@ var Chrowety = {
         var User   = db.pega('user');
         var Lists = new Request(api[_NAME_](User), 'get');
             Lists.sucesso = function(json,s){
+               tws[_NAME_].names = [];
+               tws[_NAME_].full_names = [];
+               tws[_NAME_].total = 0;
                $.each(json.lists,function(n,w){
                    tws[_NAME_].names[tws[_NAME_].total] = w.slug;
                    tws[_NAME_].full_names[tws[_NAME_].total] = w.full_name;
@@ -1019,7 +1022,7 @@ var Chrowety = {
                    tws[_NAME_].total++;
                });
                time.list = [];
-               tws[_NAME_].loaded = true;
+               tws.lists.loaded = true;
 
                if(callback){
                     try{eval('Popup().'+callback)}catch(e){}
@@ -1311,9 +1314,10 @@ var Chrowety = {
                               $.each(json,function(n,w){
                                 if(n == 0){return;}
                                 taid = w.id;
+                                w.read = true;
                                 id = w.retweeted_status ? w.retweeted_status.id : w.id;
                                 oid = id;
-                                ht = Layout(w, _NAME_, 'read');
+                                ht = Layout(w, _NAME_);
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
@@ -1462,9 +1466,10 @@ var Chrowety = {
                               $.each(json,function(n,w){
                                 if(n == 0){return;}
                                 taid = w.id;
+                                w.read = true;
                                 id = w.retweeted_status ? w.retweeted_status.id : w.id;
                                 oid = id;
-                                ht = Layout(w, _NAME_, 'read');
+                                ht = Layout(w, _NAME_);
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
@@ -1605,9 +1610,10 @@ var Chrowety = {
                               $.each(json,function(n,w){
                                 if(n == 0){return;}
                                 taid = w.id;
+                                w.read = true;
                                 id = w.retweeted_status ? w.retweeted_status.id : w.id;
                                 oid = id;
-                                ht = LayoutMessage(w, _NAME_, 'read');
+                                ht = LayoutMessage(w, _NAME_);
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
@@ -1710,7 +1716,8 @@ var Chrowety = {
                 Max.sucesso = function(json,s){
                               var id;
                               $.each(json,function(n,w){
-                                ht = Layout(w, _NAME_, 'read');
+                                w.read = true;
+                                ht = Layout(w, _NAME_);
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
@@ -1763,6 +1770,7 @@ function LayoutMessage(w, time){
                     '<div class="fr">'+
                         '<a title="'+Traduz('translate_this_tweet')+'" onclick="Traduzir('+tid+', \''+time+'\');" class="trans opts">Hover</a>'+
                     '</div>'+
+                    '<span class="tweets_names dn" ><a class="usuario" title="'+user+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: </span>'+
                     '<span id="texto_'+tid+'" class="texwt" data="'+escape(w.text)+'" html="'+escape(txt)+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
@@ -1779,7 +1787,7 @@ function LayoutMessage(w, time){
               '</div><br />-->'+
               '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
               '<span id="reply_rt_'+tid+'" class="dn">' +
-                 '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
+                 '<span class="short" title="'+Traduz('url_shortener')+'"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
                  '<button class="button_margin" id="botao_'+tid+'" onclick="doReplyDM('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Enter)">'+Traduz('done')+'</button>' +
                  '<a onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
               '</span>' +
@@ -1815,7 +1823,7 @@ function Layout(w, time, list){
     txt = '<span class="cadeado" title="Protected"></span> '+txt;
   }
 
-  var Mentionado = (txt.indexOf(db.pega('user')) != -1) ? "mentionado" : "";
+  var Mentionado = (txt.indexOf(db.pega('user')) != -1) ? ( time == "home" ? "mentionado" : "") : "";
 
 
   if(w.retweeted_status){
@@ -1861,7 +1869,9 @@ function Layout(w, time, list){
   //YouTube http://www.youtube.com/watch?v=sG5lpGdNd5E
   txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
 
-
+  //Youtu.be
+  txt = txt.replace(/((https?):\/\/(youtu.be\/|www.youtu.be\/)([-_a-zA-Z_0-9]*|$)([?_a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
+	  
   //Links sem Http
   txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this, event);">$2</a> ');
 
@@ -1909,15 +1919,17 @@ function Layout(w, time, list){
                         dm+
                         '<a title="'+Traduz('translate_this_tweet')+'" onclick="Traduzir('+tid+', \''+time+'\');" class="trans opts">Hover</a>'+
                     '</div>'+
+					(!w.retweeted_status ? '<span class="tweets_names dn" ><a class="usuario" title="'+user+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: </span>':'')+
                     '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'" html="'+escape(txt)+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
                     '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" onclick="Link(this, event);" data="'+data+'"></a></span>' +
                     ' <span class="cinza p8">via</span> '+source+' ' +
                     in_reply +
+					Retweeted +
                     RT +
                     del +
-                    Retweeted +
+                    
                 '</div>' +
                 '<a tid="'+tid+'" time="'+time+'" onclick="Reply('+tid+', false, \''+time+'\');" class="r click_to_reply" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
@@ -1931,7 +1943,7 @@ function Layout(w, time, list){
                   '<a onclick="ReplyCancel('+tid+', \''+time+'\')" class="p8" title="'+Traduz('cancel')+'">'+Traduz('cancel')+'</a>' +
               '</span>' +
               '<span id="reply_rt_'+tid+'" class="dn">' +
-                 '<span class="short" title="Short a Link"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
+                 '<span class="short" title="'+Traduz('url_shortener')+'"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
                  '<button class="button_margin" id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>' +
                  '<a id="botao_'+tid+'_cancel" onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
               '</span>' +
@@ -2039,6 +2051,7 @@ function LayoutPage(w, time){
                     '</a>' +
                     creator+
                     //fav+
+					(!w.retweeted_status ? '<a class="tweets_names usuario" title="'+user+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: ':'')+
                     '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +

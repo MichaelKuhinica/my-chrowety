@@ -1,6 +1,8 @@
 var language = {
   "name": "German",
   "author": "Gil Desmarais",
+  "email": "",
+  "date": "24/12/09",
   "id": "de",
   "charset": "UTF-8",
   "plural_word": "n",
@@ -97,7 +99,15 @@ var language = {
 		  "add_list": "Liste& hinzuf&uuml;gen",
 		  "remove_list": "Liste& entfernen",
 		  "icon": "Icon",
-		  "popup_height": "Popup Höhe",
-		  "new": "Neu"
+		  "popup_height": "Popup H&ouml;he",
+		  "new": "Neu",
+          "reload_lists": "Reload Lists",
+          "no_lists_found": "No Lists found",
+          "show_username_in_tweets": "Show username in tweets",
+          "follow": "Follow",
+          "unfollow": "Unfollow",
+          "expand": "Expand",
+          "contract": "Contract",
+          "conversation": "Conversation"
   }
 };

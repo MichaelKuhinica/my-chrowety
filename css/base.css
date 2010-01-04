@@ -79,7 +79,7 @@ input[type="password"]{
   left:0;
   width:100%;
   height:100%;
-  z-index:1;
+  z-index: 10000000;
   background:#000;
   opacity:.3;
 }
@@ -91,7 +91,7 @@ input[type="password"]{
   min-width:250px;
   max-width:300px;
   min-height:200px;
-  z-index:1;
+  z-index:10000001;
   background:#fff;
   padding:10px;
   border-radius:8px;
@@ -135,7 +135,14 @@ input[type="password"]{
   font-family: Arial, "Arial Narrow", "Arial Black";
   opacity:.6;
 }
-
+.user_opt{
+	background-color:#eee;
+	padding:5px;
+	cursor:pointer;				
+}
+.user_opt:hover{
+	background-color:#ddd;
+}
 .init{
   width:385px;
 }
@@ -241,7 +248,6 @@ input[type="password"]{
   border:1px solid #ccc;
 }
 
-
 .menu button{
   border-top-left-radius: 3px;
   border-top-right-radius: 3px;
@@ -346,6 +352,19 @@ button[disabled="disabled"]:hover{
   background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#f5f5f5), to(#fff));
   border-color:#bbb;
 }
+/*
+@-webkit-keyframes GuiaAlerta{
+    from{ background: #ddd}
+    50% { background: #eee}
+    to{ background: #fff}
+}
+button[alerta="true"]{
+    -webkit-animation-name: GuiaAlerta;
+    -webkit-animation-duration: 800ms;
+    -webkit-animation-iteration-count: infinite;
+    background:#fff;
+}
+*/
 .twets_con{
   text-align: center;
 }
@@ -408,13 +427,21 @@ button[disabled="disabled"]:hover{
   -webkit-transition: opacity 350ms linear;
 }
 .twets .mentionado{
-  /*background:transparent url('../img/wm.png') no-repeat left bottom;*/
+	margin-left:10px;	
+  	background:transparent url('../img/wm.png') no-repeat left bottom;
 }
 .twets .read{
   border-left:2px solid transparent;
 }
 .twets .unread{
-  border-left:2px solid -webkit-gradient(linear, 0% 0%, 0% 100%, from(#ddd), to(#fff));
+	/*
+	background-color:#f0f0f0;
+	border-top-left-radius:15px;
+	border-bottom-left-radius:15px;
+	margin-left:5px;
+	margin-bottom:10px;	
+    border-left:2px solid -webkit-gradient(linear, 0% 0%, 0% 100%, from(#ddd), to(#fff));*/
+  background:transparent url('../img/wu.png') no-repeat left bottom;
   /*background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fcfcfc), to(#fff));*/
 }
 .twets .read:hover{
@@ -682,6 +709,10 @@ button[disabled="disabled"]:hover{
 .button_margin{
 	margin-right:5px;
 }
+.r_tr{border-top-right-radius:5px}
+.r_tl{border-top-left-radius:5px}
+.r_br{border-bottom-right-radius:5px}
+.r_bl{border-bottom-left-radius:5px}
 .pointer{cursor:pointer}
 .reflect{-webkit-box-reflect:below 0.01em -webkit-gradient(linear, left top, left bottom, from(transparent), color-stop(0.7, transparent), to(white));}
 .vmiddle{vertical-align:middle}

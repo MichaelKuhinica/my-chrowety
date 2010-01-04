@@ -2,7 +2,7 @@
   position: fixed !important;
   top:5px;
   right:5px;
-  z-index:999999;
+  z-index:10000001;
   /*height:150px;*/
   width:375px;
   padding:5px;
