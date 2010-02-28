@@ -1,7 +1,34 @@
 body{
   text-align: center;
   margin:10%;
-  margin-top:5%;
+  margin-top:1%;
+  overflow:auto;
+  background-color:#fff;
+}
+::-webkit-scrollbar {
+    width: 10px;
+    height: 13px;
+}
+::-webkit-scrollbar{
+    background-color:#fff;
+}
+::-webkit-scrollbar-button{
+    display:none;
+}
+::-webkit-scrollbar-thumb:vertical{
+    border-color: transparent;
+    border-width: 13px 0;
+    min-height: 20px;
+    -webkit-border-image: url('../img/vertical-thumb.png') 10 0 10 0;
+    -webkit-opacity:.3;
+    -webkit-transition: opacity 350ms linear;
+    -webkit-border-radius:5px;
+}
+::-webkit-scrollbar-thumb:vertical:hover {
+    -webkit-border-image: url('../img/vertical-thumb-hover.png') 10 0 10 0;
+}
+::-webkit-scrollbar-thumb:vertical:active {
+    -webkit-border-image: url('../img/vertical-thumb-active.png') 10 0 10 0;
 }
 .config{
     border-radius:10px;
@@ -12,9 +39,6 @@ body{
     margin-right:auto;
     padding:0;
     background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#eee), to(#fff));
-/*
-    -webkit-box-reflect:below 1px -webkit-gradient(linear, left top, left bottom, from(transparent), color-stop(0.1, transparent), to(white));
-*/
 }
 .config .tit{
     font-weight: bold;
@@ -129,3 +153,4 @@ body{
   width:80px;
   display:inline-block;
 }
+hr{border:1px solid #eee;}

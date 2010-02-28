@@ -1,18 +1,27 @@
 <html>
 <head>
-<meta charset="">
-<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
 <script type="text/javascript" src="js/db.js"></script>
 <script type="text/javascript" src="js/oauthsimple.min.js"></script>
+<script type="text/javascript" src="js/OpenDatabase.js"></script>
 <script type="text/javascript">
-var Popup = function(){return chrome.experimental.extension.getPopupView();}
-var m = function(i){return Math.floor(i*60000)};
+var Popup = function(){
+    if(chrome.experimental.extension.getPopupView()){
+        return chrome.experimental.extension.getPopupView();
+    }else{
+        var v = chrome.extension.getViews(),p;
+        for(var i in v){
+            if(v[i] && v[i].LT){
+                p = v[i];
+            }
+        }
+        return p;
+    }
+}
 var AuthMode = null;
-
-/*
-Current changelog:
-    - Added another icon option
-*/
+var Database = new OpenDatabase('Chrowety');
+var m = function(i){return Math.floor(i*60000)};
+var s = function(i){return Math.floor(i*1000)};
 var OAuth = {
     consumer:{
       key: 'eWGZ2e24PmM301P1i0f6bQ',
@@ -50,7 +59,12 @@ var OAuth = {
                 }
                 try{Popup().init()}
                 catch(e){}
-            };
+            }
+            Tok.erro = function(e){
+                OAuth.token.erro = true;
+                try{Popup().init()}
+                catch(e){}
+            }
             Tok.init();
     },
 
@@ -117,7 +131,7 @@ function Request(url, met, type, ctype){
                 this.dados = {};
             }
             this.init();
-        };
+        }
 
         this.init = function(){
           $.ajax({
@@ -128,9 +142,10 @@ function Request(url, met, type, ctype){
                 contentType: this.contentType,
                 success: this.sucesso,
                 error: this.erro,
+                timeout: s(6)
              }
           );
-        };
+        }
 }
 var tBase = 'https://api.twitter.com/1';
 var tBaseOAuth = 'https://api.twitter.com';
@@ -146,6 +161,7 @@ var api = {
     home:function(){return         tBase+ '/statuses/home_timeline.json'            },
     friends:function(){return      tBase+ '/statuses/friends_timeline.json'         },
     mentions:function(){return     tBase+ '/statuses/mentions.json'                 },
+    messagesSent:function(){return tBase+ '/direct_messages/sent.json'              },
     messages:function(){return     tBase+ '/direct_messages.json'                   },
     favorites:function(){return    tBase+ '/favorites.json'                         },
     update:function(){return       tBase+ '/statuses/update.json'                   },
@@ -162,23 +178,27 @@ var api = {
     list:function(user,lid){return tBase+ '/'+user+'/lists/'+lid+'/statuses.json'   },
 
     googl:'http://goo.gl/api/url',
+    urli: 'http://urli.nl/api.php',
+    miudin: 'http://miud.in/api-create.php',
     threely:'http://3.ly/',
     twitpic:'http://twitpic.com/show/',
+    twitgoo:'http://twitgoo.com/api/message/info/',
     tweetphoto_view:'http://TweetPhotoAPI.com/api/TPAPI.svc/imagefromurl',
     tweetphoto_post:'http://tweetphotoapi.com/api/tpapi.svc/upload2',
     migre_short:'http://migre.me/api.xml',
     migre_long:'http://migre.me/api_redirect2.xml',
-    bitly_key:'R_97c454d9f47bad7c916ae97742d66b8b',
     bitly_short:'http://api.bit.ly/shorten',
     jmp_short:'http://api.j.mp/shorten',
     isgd:'http://is.gd/api.php',
     trim:'http://api.tr.im/v1/trim_simple',
     untrim:'http://untr.im/api/ajax/api',
+
+    audio:'http://vjnrv.net/Labs/Chrowety/Res/alerta.wav'
 };
 var time = {};
 
 var Logado=false,_iniciou,total=0,new_count=0,api_limit = null,api_checked=false,aid,oid,taid;
-
+var AlertaAudioFile = new Audio();
 function SinceDate(TD){
     var a = new Date(TD);
     return a.getDate()+'/'+(a.getMonth()+1)+'/'+a.getFullYear();
@@ -190,32 +210,65 @@ function ApiDate(TD){
 }
 
 function TweetData(TD) {
-  var TD = Date.parse(TD);
-  var s;
-  var Calc = (new Date().getTime() - TD) / 1000;
-  if(Calc < 15) {
-          return Traduz('just_now');
-  } else if(Calc < 60) {
-          return Traduz('less_than_a_minute_ago');
-  } else if(Calc < 60 * 60) {
-          var Min = parseInt(Calc / 60);
-		  	s = (Min > 1) ? Traduz('minute_ago',true).replace('%s',Min) : Traduz('minute_ago').replace('%s',Min);
-          return s;
-  } else if(Calc < 60 * 60 * 24) {
-          var Hor = parseInt(Calc / (60 * 60));
-		  	s = (Hor > 1) ? Traduz('about_hour_ago', true).replace('%s', Hor) : Traduz('about_hour_ago').replace('%s', Hor);
-          return s;
-  } else if(Calc < 60 * 60 * 24 * 30) {
-          var Day = parseInt(Calc / (60 * 60 * 24));
-		  	s = (Day > 1) ? Traduz('about_day_ago',true).replace('%s', Day) : Traduz('about_day_ago').replace('%s', Day);
-          return s;
-  } else if(Calc < 60 * 60 * 24 * 30 * 12) {
-          var Month = parseInt(Calc / (60 * 60 * 24 * 30));
-		  	s = (Month > 1) ? Traduz('about_month_ago',true,(language.id == 'pt_br' || language.id == 'es' ? 'es' :null)).replace('%s', Month) : Traduz('about_month_ago').replace('%s', Month);
-          return s;
-  } else {
-          return Traduz('years_ago');
-  }
+    var TD = new Date(TD);
+        //console.log(TD.toUTCString());
+    var AD = new Date();
+        //console.log(AD.toUTCString());
+        /*
+    var Tweet = {
+        ano: TD.getUTCFullYear(),
+        mes: TD.getUTCMonth(),
+        dia: TD.getUTCDay(),
+        hor: TD.getUTCHours(),
+        min: TD.getUTCMinutes(),
+        sec: TD.getUTCSeconds()
+    };
+    var Atual = {
+        ano: AD.getUTCFullYear(),
+        mes: AD.getUTCMonth(),
+        dia: AD.getUTCDay(),
+        hor: AD.getUTCHours(),
+        min: AD.getUTCMinutes(),
+        sec: AD.getUTCSeconds()
+    };
+
+    console.log(Tweet);
+    console.log(Atual);
+    var offset = TD.getTimezoneOffset() / 60;
+    */
+    var TD_ = Date.parse(TD); //Date.parse(TD.toUTCString());
+    var s;
+    //var Calc = (new Date(new Date().toUTCString()).getTime() - TD_) / 1000;
+    var Calc = (new Date().getTime() - TD_) / 1000;
+    if(Calc < 15) {
+            return Traduz('just_now');
+    }
+    else if(Calc < 60) {
+            return Traduz('less_than_a_minute_ago');
+    }
+    else if(Calc < 60 * 60) {
+            var Min = parseInt(Calc / 60);
+  		    s = (Min > 1) ? Traduz('minutes_ago', [Min]) : Traduz('a_minute_ago');
+            return s;
+    }
+    else if(Calc < 60 * 60 * 24) {
+            var Hor = parseInt(Calc / (60 * 60));
+  		    s = (Hor > 1) ? Traduz('hours_ago', [Hor]) : Traduz('a_hour_ago');
+            return s;
+    }
+    else if(Calc < 60 * 60 * 24 * 30) {
+            var Day = parseInt(Calc / (60 * 60 * 24));
+  		    s = (Day > 1) ? Traduz('days_ago', [Day]) : Traduz('a_day_ago');
+            return s;
+    }
+    else if(Calc < 60 * 60 * 24 * 30 * 12) {
+            var Month = parseInt(Calc / (60 * 60 * 24 * 30));
+  		    s = (Month > 1) ? Traduz('months_ago', [Month]) : Traduz('a_month_ago');
+            return s;
+    }
+    else {
+            return Traduz('years_ago');
+    }
 }
 
 var tws = {
@@ -252,38 +305,19 @@ var tws = {
       total:0,
       full_names:[],
       names:[],
-      lists:[]
+      lists:[],
+      ativos:[]
     },
     list:[],
 };
-
-function LoadLang(){
-    var lg = config.language;
-    if($('#language')[0]){
-        $('#language').remove();
-    }
-    var Ll = document.createElement('script');
-        Ll.type = 'text/javascript';
-        Ll.src  = 'lang/'+lg+'.js';
-        Ll.id   = 'language';
-    document.head.appendChild(Ll);
-	language.slogan_bak = language.slogan;
-    //$('#language').attr('charset', language.charset);
-    //$('#language').attr('src', 'lang/'+lg+'.js');
-    console.log('LoadLang() > '+lg);
-}
-
 function Traduz(s, e, pl){
-	if(language[language.id][s]){
-		if(e === true){
-			return (language[language.id][s]).replace('& ', (pl?pl:language.plural_word)+' ');
-		}else{
-			return (language[language.id][s]).replace('& ', ' ')+(e?e:'');	
-		}		
-	}else{
-		return s;
-	}
+    var re = chrome.i18n.getMessage(s, e);
 
+    if(re){
+        return re;
+    }else{
+        return s;
+    }
 }
 
 function LoadIcon(){
@@ -337,18 +371,39 @@ function LoadConfig(){
 		}
 		if(!config.show_username){
 			config.show_username = "false";
-		}		
+		}
+		if(!config.desktop_notifications){
+			config.desktop_notifications = "true";
+		}
+		if(!config.desktop_notifications_timeout){
+			config.desktop_notifications_timeout = 10;
+		}
+		if(!config.audio_alerta){
+			config.audio_alerta = "true";
+		}
+		if(!config.bitly_key){
+			config.bitly_key = "R_9feba944d032e9857730684feb87e1be";
+		}
+		if(!config.bitly_user){
+			config.bitly_user = "chrowety";
+		}
+		if(!config.Geo){
+            config.Geo = {
+                enabled: "false",
+                Location: [],
+                Address: null
+            };
+		}
         db.salva('config', J2S(config));
-        console.log(config);
+        //console.log(config);
     }else
     {
-        console.log('LoadConfig() > Padr�o');
+        console.log('LoadConfig() > Padrão');
         config = DefaultConfig;
     }
 
     tBase = config.base_api;
 	LoadIcon();
-    LoadLang();
 }
 
 function ReLoadConfig(){
@@ -372,17 +427,27 @@ var config = {};
 var DefaultConfig = {
     language: 'en',
     base_api: 'https://api.twitter.com/1',
-    translate_tweets_to: 'zh-CN',
+    translate_tweets_to: 'en',
     url_shortener: 'goo.gl',
-    tweet_font_size: '10pt',
+    tweet_font_size: '9pt',
     tweet_shadow: "false",
     twitter_question: false,
     link_in_bg: "false",
 	icone: 'normal',
 	popup_height: '450px',
-	show_username: "false",
-    alerts: "true",
+	show_username: "true",
+    desktop_notifications: 'true',
+    desktop_notifications_timeout: 10,
+    alerts: "false",
+    audio_alerta: "true",
     alerts_max:5,
+    bitly_key: 'R_9feba944d032e9857730684feb87e1be',
+    bitly_user: 'chrowety',
+    Geo:{
+        enabled: "false",
+        Location: [],
+        Address: null,
+    },
     start_count:{
       home:10,
       mentions:10,
@@ -469,26 +534,43 @@ function CalculaApiRequests(){
     perc = ((calc / 150) * 100).toFixed();
     return {numero: calc, porcento: perc};
 }
-
+var RateTrava = null;
 function RateLimit(func){
+    console.log('RateLimit()');
+    if(RateTrava){
+        return false;
+    }
+    RateTrava = true;
     var Rate = new Request(api.rate(), 'get');
         Rate.sucesso = function(json){
-            api_limit = json.remaining_hits;
-            db.salva('api_limit', json.remaining_hits);
-            db.salva('api_reset_time', json.reset_time);
-            if(api_limit > 0){
-                api_checked = true;
-                console.log('RateLimit() > OK > '+api_limit+' | '+ ApiDate(db.pega('api_reset_time')));
-                if(func){
-                  try{eval(func)}catch(e){}
+            if(json && json.remaining_hits){
+                api_limit = json.remaining_hits;
+                db.salva('api_limit', json.remaining_hits);
+                db.salva('api_reset_time', json.reset_time);
+                if(api_limit > 0){
+                    api_checked = true;
+                    console.log('RateLimit() > OK > '+api_limit+' | '+ ApiDate(db.pega('api_reset_time')));
+                    if(func){
+                      try{eval(func)}catch(e){}
+                    }
+                }else{
+                    console.log('RateLimit() > Limit Exceeded');
+                    try{
+                      Popup().RefreshLimit(new_count);
+                    }catch(e){}
                 }
             }else{
-                console.log('RateLimit() > Limit Exceeded');
-                try{
-                  Popup().RefreshLimit(new_count);
-                }catch(e){}
+                Rate.erro();
             }
-        };
+            RateTrava = null;
+        }
+
+        Rate.erro = function(e){
+            console.log('RateLimit() > FAIL');
+            RateTrava = null;
+            setTimeout('RateLimit(\''+func+'\')', s(10));
+        }
+
         Rate.initOAuth();
 }
 
@@ -511,8 +593,7 @@ function ClearUnreads(tm){
         }
     }
 
-    chrome.browserAction.setBadgeText({text:''});
-
+    MostraCount();
 }
 
 function SalvaProfile(json){
@@ -525,6 +606,54 @@ function SalvaProfile(json){
   db.salva('seguidores', json.followers_count);
   db.salva('seguindo', json.friends_count);
   db.salva('favoritos', json.favourites_count);
+  db.salva('profile_loaded', true);
+}
+
+function SalvaListas(){
+    var listas = tws.list;
+    var temp = [],n=0;
+    for(var i in listas){
+        if(listas[i].ativo){
+            temp[n] = i;
+            n++;
+        }
+        else{
+            continue
+        }
+    }
+    tws.lists.ativos = temp;
+    db.salva( db.pega('user') + '_listas_names' , J2S(tws.lists));
+    return temp;
+}
+
+function LoadListas(){
+    time.list = [];
+    if(db.pega((db.pega('user')+'_listas'))){
+        db.deleta(db.pega('user')+'_listas');
+    }
+    var listas_n = S2J(db.pega( (db.pega('user') + '_listas_names') ));
+    if(listas_n && typeof(listas_n) == 'object'){
+        tws.lists = listas_n;
+        for(var i in tws.lists.ativos){
+            i = tws.lists.ativos[i];
+            console.log('List: '+i);
+            if(!tws.list[i]){
+                tws.list[i] = {};
+                tws.list[i].total = 0;
+                tws.list[i].tweets = [];
+                Chrowety.List.Run(i, 'LT.initLists()');
+            }
+        }
+    }else{
+        tws.lists = {
+            loaded:false,
+            total:0,
+            full_names:[],
+            names:[],
+            lists:[],
+            ativos:[]
+        }
+    }
 }
 
 function ContaTweets(tm, list){
@@ -543,7 +672,7 @@ function ContaTweets(tm, list){
           tws[tm][list].ultimo = id;
       }else{
           if(i == 1){Chrowety[tm].primeiro_lista = id;fid=id}
-          Chrowety[tm].ultimo = id;
+          if(!tw[a].own){Chrowety[tm].ultimo = id}
       }
     }
     if(list){
@@ -555,6 +684,16 @@ function ContaTweets(tm, list){
     //console.log('ContaTweet() '+tm+': '+i+' LastID: '+id+' FirstID: '+fid+' First_In: '+Chrowety[tm].primeiro_lista);
 }
 
+function MostraCount(){
+    var Total = tws.home.new_count + tws.mentions.new_count + tws.messages.new_count;
+    if(Total == 0){
+        Total = '';
+    }
+    chrome.browserAction.setBadgeText({text:''+Total});
+
+    return Total > 0 ? Total : 0;
+}
+
 var fec = {
     ByTid:function(tm, tid, del, list){
         if(list){
@@ -563,7 +702,7 @@ var fec = {
             var a = tws[tm].tweets;
         }
         for(i in a){
-            if(a[i].id == tid){
+            if(a[i] && a[i].id == tid){
                 if(del){
                   //delete tws[tm].tweets[i];
                   delete a[i];
@@ -582,6 +721,26 @@ var fec = {
             }
         }
     },
+
+    clearNull:function(ob, n){
+        if(ob && typeof(ob) == 'object'){
+            var temp = [], i=0;
+            for(i in ob){
+                //if(ob[i] != 'undefined' && ob[i] != null){
+                if(n == i) break;
+                if(ob[i] && ob[i].id){
+                    temp[temp.length] = ob[i];
+                }else{
+                    continue;
+                }
+                i++;
+            }
+            return temp;
+        }else{
+            return false;
+        }
+    },
+
     refresh:function(tm){
         var ob = tws[tm].tweets;
         for(id in ob){
@@ -616,19 +775,37 @@ var fec = {
         return re;
     },
 
+    lastNotifications:function(tm, n, max){
+        var re = [];
+        for(i=0;i<n;i++){
+            if(i>=max)break;
+            re[i] = LayoutNotifications(Sortear(tws[tm].tweets, 'id', true)[i], tm);
+        }
+        return re;
+    },
+
     html:function(tm, cf, count, list){
         //console.log('fec('+tm+', '+cf+', '+count+', '+list+')');
         var i = 0;
         var re='';
+        var ob = [];
+        var total = 0;
         if(list){
-            var ob = Sortear(tws.list[tm].tweets, 'id', true);
-            var total = count ? count : 20;
+            if(typeof(tws.list[tm]) == 'object'){
+                ob = Sortear(tws.list[tm].tweets, 'id', true);
+                total = count ? count : 20;
+            }
         }else{
-            var ob = Sortear(tws[tm].tweets, 'id', true);
-            var total = count ? count : config.start_count[tm];
+            if(typeof(tws[tm].tweets) == 'object'){
+                ob = Sortear(tws[tm].tweets, 'id', true);
+                total = count ? count : config.start_count[tm];
+            }
         }
         var ia = 0;
         for(id in ob){
+          if(!ob[id]){
+                continue;
+          }
           if(cf && cf.max){
             //console.log('fec.html() > max: '+cf.max+ ' e: '+ob[id].id);
             if(i > total)break;
@@ -702,8 +879,23 @@ var Chrowety = {
           return version;
     },
 
-    // @lembra
-    // @login
+
+    Run:function(){
+        console.log('Chrowety.Run()');
+        var guia = db.pega('AbaAtiva');
+        try{
+            Popup().init();
+        }catch(e){}
+        Chrowety.home.Run('LT.home()');
+        Chrowety.mentions.Run('LT.CheckLoadeds()');
+        Chrowety.messages.Run('LT.CheckLoadeds()');
+        Chrowety.messages.Run('LT.CheckLoadeds()', true);
+        Chrowety.favorites.Run('LT.CheckLoadeds()');
+        LoadListas();
+        time.profile = window.setInterval('Chrowety.profile()', m(config.refresh.profile));
+        time.limit = window.setInterval('CheckLimit()', m(config.refresh.limit_check));
+    },
+
     login:function(lembra, login){
       var Login = new Request(api.login(), 'get');
           Login.sucesso = function(json){
@@ -732,6 +924,12 @@ var Chrowety = {
                   Popup().init();
                   console.log('Chrowety.login() > OK');
               }
+
+              chrome.browserAction.setTitle({title:'Chrowety ('+db.pega('user')+')'});
+
+              try{
+                Popup().LoadProfile();
+              }catch(e){}
 
           };
           Login.erro = function(){
@@ -824,42 +1022,47 @@ var Chrowety = {
      * @reply_id Number - id do tweet de resposta
      * @tm String - Timeline do tweet
      */
-    update:function(s, reply_tid, tm){
-      var src = 'chrowety';//'blu';//'friendfeed';//'twidroid';//'tweetdeck';//'seesmicdesktop';//
+    update:function(s, reply_tid, tm, callback, rt){
+      var src = 'chrowety';
       var Up = new Request(api.update(), 'post');
-          Up.dados = reply_tid ? {status: s, in_reply_to_status_id: reply_tid} : {status: s};
+          if(config.Geo.enabled == 'true'){
+              var _ll = config.Geo.Location;
+              Up.dados = reply_tid && !rt ? {lat: _ll[0], long: _ll[1], status: s, in_reply_to_status_id: reply_tid, source: src} : {lat: _ll[0], long: _ll[1], status: s, source: src};
+          }else{
+              Up.dados = reply_tid && !rt ? {status: s, in_reply_to_status_id: reply_tid, source: src} : {status: s, source: src};
+          }
           Up.sucesso = function(w){
-            console.log('Tweet send: '+s);
+            console.log('Chrowety.update() > OK');
             ht = Layout(w, tm);
+            w.own = true;
             tws.home.total++;
             tws.home.tweets[tws.home.total] = w;
-            tws.home.tweets[tws.home.total].html = ht;
-            //> Salva o perfil
-            var U = S2J(db.pega('profile_view'));
-            var ts = J2S(w.user);
-                ts = S2J(ts); // POG pra tirar relacionamento
-                ts.status = J2S(w);
-                ts.status = S2J(ts.status);
-                delete ts.status.user;
-            U[ts.screen_name] = ts;
-            db.salva('profile_view', J2S(U));
-            Chrowety.home.ultimo = w.id;
-           //ContaTweets(tm);
-            console.log('Chrowety.update() > OK');
-                if(reply_tid){
-                    Popup().ReplyOK(reply_tid, tm);
+            tws.home.tweets[tws.home.total].read = true;
+            Utils.Tweet.DetectSaveMention(w, 'home');
+                if(!callback){
+                    if(reply_tid){
+                        Popup().ReplyOK(reply_tid, tm);
+                    }else{
+                        Popup().UpdateOK(ht, tm);
+                    }
                 }else{
-                    Popup().UpdateOK(ht, tm);
+                    callback(true);
                 }
-          };
+
+          }
           Up.erro = function(){
                 console.log('Chrowety.update() > FAIL');
-                if(reply_tid){
-                    Popup().ReplyFAIL(reply_tid, tm, "error");
-                }else{
-                    Popup().UpdateFAIL(reply_tid, tm, "error");
+                if(!callback){
+                    if(reply_tid){
+                        Popup().ReplyFAIL(reply_tid, tm, "error");
+                    }else{
+                        Popup().UpdateFAIL(reply_tid, tm, "error");
+                    }
                 }
-          };
+                else{
+                    callback();
+                }
+          }
           Up.initOAuth();
     },
 
@@ -869,16 +1072,16 @@ var Chrowety = {
           Up.dados = {screen_name: user, text: s};
           Up.sucesso = function(w){
             console.log('Message send: '+s);
-/*
-            ht = LayoutMessage(w, _NAME_);
+
             tws[_NAME_].total++;
             tws[_NAME_].tweets[tws[_NAME_].total] = w;
-            tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+            tws[_NAME_].tweets[tws[_NAME_].total].read = true;
+
             Chrowety[_NAME_].ultimo = w.id;
-*/
+
             Popup().ReplyDMOK(tid, (tm ? tm : _NAME_));
             console.log('Chrowety.updateDM() > OK');
-          };
+          }
           Up.erro = function(e){
                 console.log('Chrowety.updateDM() > FAIL');
                 var status = e.statusText;
@@ -888,12 +1091,12 @@ var Chrowety = {
                 }else{
                     Popup().ReplyDMFAIL(tid, tm, "error");
                 }
-          };
+          }
           Up.initOAuth();
     },
 
 
-    deleta:function(tid, time){
+    deleta:function(tid, time, rt){
       var del = new Request(api.destroy(tid), 'post');
           del.sucesso = function(){
             fec.ByTid(time, tid, true);
@@ -903,73 +1106,99 @@ var Chrowety = {
                 fec.ByTid(_NAME_[n], tid, true);
               }catch(e){console.log(e)}
             }
-
+            if(rt){
+                Popup().UndoRTOK(tid, time, rt);
+                fec.ByTid(time, rt).retweeted_by_me = false;
+                fec.ByTid(time, rt).retweeted_by_me_status = null;
+            }else{
+                Popup().DeletaOK(tid, time);
+            }
             console.log('Chrowety.deleta() > OK');
-          };
+          }
           del.erro = function(){
                 console.log('Chrowety.deleta() > FAIL');
-          };
+            if(rt){
+                Popup().UndoRTFAIL(tid, time, rt);
+            }else{
+                Popup().DeletaFAIL(tid, time);
+            }
+          }
           del.initOAuth();
     },
 
     deletaDM:function(tid, time){
       var del = new Request(api.destroyDM(tid), 'post');
           del.sucesso = function(){
-            fec.ByTid(time, tid, true);
-            console.log('Chrowety.deletaDM() > OK');
-          };
+                fec.ByTid(time, tid, true);
+                Popup().DeletaOK(tid, time);
+                console.log('Chrowety.deletaDM() > OK');
+          }
           del.erro = function(){
+                Popup().DeletaFAIL(tid, time);
                 console.log('Chrowety.deletaDM() > FAIL');
-          };
+          }
           del.initOAuth();
     },
 
     retweet:function(tid, time){
       var rt = new Request(api.retweet(tid), 'post');
-          rt.sucesso = function(){
-            console.log('Retweet send: '+tid);
-            Popup().RetweetOK(tid, time);
-          };
+          rt.sucesso = function(w){
+            console.log('Retweeted: '+tid);
+            /*
+            w.own = true;
+            tws.home.total++;
+            tws.home.tweets[tws.home.total] = w;
+            tws.home.tweets[tws.home.total].read = true;
+            */
+            fec.ByTid(time, tid).retweeted_by_me = true;
+            fec.ByTid(time, tid).retweeted_by_me_status = w.id;
+            Popup().RetweetOK(tid, time, w.id);
+          }
           rt.erro = function(e){
-            var status = e.statusText;
+            var status = 'error';
+            try{
+                status = e && e.statusText ?  e.statusText : status;
+            }catch(e){}
             if(status == "Forbidden"){
                 Popup().RetweetFAIL(tid, time, "forbidden");
             }else{
                 Popup().RetweetFAIL(tid, time, "error");
             }
             console.log('Chrowety.retweet() > FAIL');
-          };
+          }
           rt.initOAuth();
     },
 
     fav_active:false,
-    favorite:function(tid, time){
+    favorite:function(tid, time, list){
       console.log('favorite: '+tid+' - '+time);
       Chrowety.fav_active = true;
       var fav = new Request(api.favorite(tid), 'post');
           fav.sucesso = function(){
             console.log('Favoriting tweet: '+tid);
-            fec.ByTid(time, tid).favorited = true;
+            //(tm, tid, del, list)
+            fec.ByTid(time, tid, null, list).favorited = true;
+            //fec.ByTid(time, tid).favorited = true;
             try{
               tws['favorites'].total++;
-              tws['favorites'].tweets[tws['favorites'].total] = fec.ByTid(time, tid);;
+              tws['favorites'].tweets[tws['favorites'].total] = fec.ByTid(time, tid, null, list);
             }catch(e){}
             Popup().FavOK(tid, true, time);
             Chrowety.fav_active = false;
-          };
+          }
           fav.erro = function(){
                 console.log('Chrowety.favorite() > FAIL');
-          };
+          }
           fav.initOAuth();
     },
 
     unfav_active:false,
-    unfavorite:function(tid, time){
+    unfavorite:function(tid, time, list){
       Chrowety.unfav_active = true;
       var fav = new Request(api.unfavorite(tid), 'post');
           fav.sucesso = function(){
             console.log('Unfavoriting tweet: '+tid);
-            fec.ByTid(time, tid).favorited = false;
+            fec.ByTid(time, tid, null, list).favorited = false;
             try{
                 fec.ByTid('favorites', tid, true);
                 fec.ByTid('home', tid).favorited = false;
@@ -977,10 +1206,10 @@ var Chrowety = {
             }catch(e){}
             Popup().FavOK(tid, false, time);
             Chrowety.unfav_active = false;
-          };
+          }
           fav.erro = function(){
                 console.log('Chrowety.unfavorite() > FAIL');
-          };
+          }
           fav.initOAuth();
     },
 
@@ -1008,6 +1237,9 @@ var Chrowety = {
         var User   = db.pega('user');
         var Lists = new Request(api[_NAME_](User), 'get');
             Lists.sucesso = function(json,s){
+               if(typeof tws[_NAME_] != 'object'){
+                    tws[_NAME_] = [];
+               }
                tws[_NAME_].names = [];
                tws[_NAME_].full_names = [];
                tws[_NAME_].total = 0;
@@ -1015,15 +1247,19 @@ var Chrowety = {
                    tws[_NAME_].names[tws[_NAME_].total] = w.slug;
                    tws[_NAME_].full_names[tws[_NAME_].total] = w.full_name;
                    tws[_NAME_].lists[tws[_NAME_].total] = w;
-                   Chrowety.List[w.slug] = {};
-                   tws.list[w.slug] = {};
-                   tws.list[w.slug].total = 0;
-                   tws.list[w.slug].tweets = [];
+                   if(typeof tws.list != 'object'){
+                      tws.list = [];
+                   }
+                   if(!tws.list[w.slug]){
+                       tws.list[w.slug] = {};
+                       tws.list[w.slug].total = 0;
+                       tws.list[w.slug].tweets = [];
+                   }
                    tws[_NAME_].total++;
                });
                time.list = [];
                tws.lists.loaded = true;
-
+               SalvaListas();
                if(callback){
                     try{eval('Popup().'+callback)}catch(e){}
                }else{
@@ -1031,10 +1267,10 @@ var Chrowety = {
                          Popup().LT.Lists(tws[_NAME_].names);
                     }catch(e){}
                }
-            };
+            }
             Lists.erro = function(re){
 
-            };
+            }
             Lists.initOAuth();
     },
 
@@ -1046,6 +1282,11 @@ var Chrowety = {
             var List = new Request(api[_NAME_](User,lid), 'get');
                 List.dados = {per_page: 10, page: 1};
                 List.sucesso = function(json,s){
+                        if(!tws.list[lid]){
+                           tws.list[lid] = {};
+                           tws.list[lid].total = 0;
+                           tws.list[lid].tweets = [];
+                        }
                         var id;
                         $.each(json,function(n,w){
                           taid = w.id;
@@ -1055,28 +1296,35 @@ var Chrowety = {
                           tws.list[lid].tweets[tws.list[lid].total] = w;
                           tws.list[lid].tweets[tws.list[lid].total].read = true;
                           ht = Layout(tws.list[lid].tweets[tws.list[lid].total], _NAME_);
-                          tws.list[lid].tweets[tws.list[lid].total].html = ht;
+                          //> Salva o perfil
                           var U = S2J(db.pega('profile_view'));
-                          var ts = J2S(w.user);
+                          if(!U[w.user.screen_name]){
+                              var ts = J2S(w.user);
                               ts = S2J(ts);
                               ts.status = J2S(w);
                               ts.status = S2J(ts.status);
                               delete ts.status.user;
-                          U[ts.screen_name] = ts;
-                          db.salva('profile_view', J2S(U));
+                              U[ts.screen_name] = ts;
+                              db.salva('profile_view', J2S(U));
+                          }
+                          //
                           if(n == 0){tws.list[lid].primeiro_lista = taid}
                         });
                         tws.list[lid]._loaded = true;
                         tws.list[lid].ultimo  = taid;
                         tws.list[lid].ativo   = true;
+                        tws.list[lid].tweets = fec.clearNull(tws.list[lid].tweets);
+                        tws.lists.ativos[tws.lists.ativos.length] = lid;
+                        SalvaListas();
                         time[_NAME_][lid] = setInterval('Chrowety.List.Since(\''+lid+'\')', m(config.refresh[_NAME_]));
                         if(callback){
                           try{eval('Popup().'+callback)}catch(e){}
                         }
-                };
+                }
                 List.erro = function(re){
-
-                };
+                    console.log('Chrowety.List.Run('+lid+') > FAIL'); 
+                    window.setTimeout('Chrowety.'+_NAME_+'.Run(\''+lid+'\', \''+callback+'\')', m(1));
+                }
                 List.initOAuth();
         },
 
@@ -1102,27 +1350,30 @@ var Chrowety = {
                                 tws.list[lid].tweets[tws.list[lid].total] = w;
                                 tws.list[lid].tweets[tws.list[lid].total].read = false;
                                 ht = Layout(tws.list[lid].tweets[tws.list[lid].total], _NAME_);
-                                tws.list[lid].tweets[tws.list[lid].total].html = ht;
                                 //> Salva o perfil
                                 var U = S2J(db.pega('profile_view'));
-                                var ts = J2S(w.user);
-                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                if(!U[w.user.screen_name]){
+                                    var ts = J2S(w.user);
+                                    ts = S2J(ts);
                                     ts.status = J2S(w);
                                     ts.status = S2J(ts.status);
                                     delete ts.status.user;
-                                U[ts.screen_name] = ts;
-                                db.salva('profile_view', J2S(U));
+                                    U[ts.screen_name] = ts;
+                                    db.salva('profile_view', J2S(U));
+                                }
+                                //
                                 novs = n;
                               });
                               time[_NAME_][lid] = setInterval('Chrowety.List.Since(\''+lid+'\')', m(config.refresh[_NAME_]));
                               tws.list[lid].ultimo = taid;
                               console.log('Chrowety.List.Since('+lid+') > New '+novs+' tweets');
                               //tws.list[lid].Notify(novs);
-                };
+                              SalvaListas();
+                }
                 Since.erro = function(){
                     console.log('Chrowety.List.Since('+lid+') > FAIL');
-                    //time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
-                };
+                    window.setTimeout('Chrowety.'+_NAME_+'.Since(\''+lid+'\', \''+since+'\')', m(config.refresh[_NAME_]));
+                }
                 Since.initOAuth();
         },
 
@@ -1150,7 +1401,7 @@ var Chrowety = {
                                   re = re+ht;
                                   tws.list[lid].total++;
                                   tws.list[lid].tweets[tws.list[lid].total] = w;
-                                  tws.list[lid].tweets[tws.list[lid].total].html = ht;
+                                  //tws.list[lid].tweets[tws.list[lid].total].html = ht;
                                   var U = S2J(db.pega('profile_view'));
                                   var ts = J2S(w.user);
                                       ts = S2J(ts); // POG pra tirar relacionamento
@@ -1166,10 +1417,10 @@ var Chrowety = {
                                 }catch(e){}
                                 //eval('Popup().'+callback);
                                 console.log('Chrowety.List.Max('+lid+') > Pegou do Online');
-                };
+                }
                 Max.erro = function(){
                     console.log('Chrowety.List.Max('+lid+') > FAIL');
-                };
+                }
                 Max.initOAuth();
             }else{
                 console.log('Chrowety.List.Max('+lid+') > Pegou do Cache');
@@ -1177,17 +1428,6 @@ var Chrowety = {
             }
         },
    },
-
-    Run:function(){
-        console.log('Chrowety.Run()');
-        var guia = db.pega('AbaAtiva');
-        Chrowety.home.Run();
-        Chrowety.mentions.Run();
-        Chrowety.messages.Run();
-        Chrowety.favorites.Run('LT.Auto()');
-        time.profile = window.setInterval('Chrowety.profile()', m(config.refresh.profile));
-        time.limit = window.setInterval('CheckLimit()', m(config.refresh.limit_check));
-    },
 
     home: {
         NAME: 'home',
@@ -1197,25 +1437,34 @@ var Chrowety = {
         ultimo:null,
         primeiro:null,
         primeiro_lista:null,
+        RunTrava: null,
+        SinceTrava: null,
 
         Notify:function(n){
             var _NAME_ = 'home';
             tws[_NAME_].new_count += n;
+            try{Popup().LT.HideLoad()}catch(e){}
             if(tws[_NAME_].new_count > 0){
                 var c = tws[_NAME_].new_count;
-                chrome.browserAction.setBadgeText({text:''+c});
-                if(n){Alerts(_NAME_, n)}
+                MostraCount();
+                if(n){
+                  Alerts(_NAME_, n);
+                }
                 try{
                     Popup().RefreshResult(c, _NAME_);
                 }catch(e){}
                 console.log('Chrowety.'+_NAME_+'.Notify(): '+c);
-                //ContaTweets(_NAME_);
             }
         },
 
         Run:function(callback){ // Rate Limited
             var _NAME_ = 'home';
-            if(!api_limit){return false}
+            if(!api_limit){
+              return false;
+            }
+            if(Chrowety[_NAME_].RunTrava){
+              return;
+            }
             console.log('Chrowety.'+_NAME_+'.Run()');
             var Run = new Request(api[_NAME_](), 'get');
                 Run.dados = {count:config.start_count[_NAME_]};
@@ -1228,34 +1477,43 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = true;
-                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //> Salva o perfil
                                 var U = S2J(db.pega('profile_view'));
-                                var ts = J2S(w.user);
-                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                if(!U[w.user.screen_name]){
+                                    var ts = J2S(w.user);
+                                    ts = S2J(ts);
                                     ts.status = J2S(w);
                                     ts.status = S2J(ts.status);
                                     delete ts.status.user;
-                                U[ts.screen_name] = ts;
-                                db.salva('profile_view', J2S(U));
+                                    U[ts.screen_name] = ts;
+                                    db.salva('profile_view', J2S(U));
+                                }
+                                //
                                 if(n == 0){Chrowety[_NAME_].primeiro_lista = taid}
                               });
                               Chrowety[_NAME_]._loaded = true;
                               Chrowety[_NAME_].ultimo = taid;
-                              //ContaTweets(_NAME_);
                               time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               if(callback){
                                 try{eval('Popup().'+callback)}catch(e){}
                               }
-                };
+                              Chrowety[_NAME_].RunTrava = null;
+                }
                 Run.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
-                };
+                    window.setTimeout('Chrowety.'+_NAME_+'.Run(\''+callback+'\')', m(1));
+                    Chrowety[_NAME_].RunTrava = null;
+                    //Chrowety[_NAME_].Run(callback);
+                }
                 Run.initOAuth();
+                Chrowety[_NAME_].RunTrava = true;
         },
         Since:function(since){ // Rate Limited
             var _NAME_ = 'home';
             if(!api_limit){return false}
+            if(Chrowety[_NAME_].SinceTrava){
+              return;
+            }
             clearInterval(time[_NAME_])
             console.log('Chrowety.'+_NAME_+'.Since()');
             ContaTweets(_NAME_);
@@ -1266,6 +1524,9 @@ var Chrowety = {
                 Since.sucesso = function(json,s){
                               var id;
                               $.each(json,function(n,w){
+                                if(fec.ByTid(_NAME_, w.id)){
+                                    return;
+                                }
                                 n++;
                                 taid = w.id;
                                 id = w.retweeted_status ? w.retweeted_status.id : w.id;
@@ -1273,30 +1534,35 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = false;
-                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                Utils.Tweet.DetectSaveMention(w, _NAME_);
                                 //> Salva o perfil
                                 var U = S2J(db.pega('profile_view'));
-                                var ts = J2S(w.user);
-                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                if(!U[w.user.screen_name]){
+                                    var ts = J2S(w.user);
+                                    ts = S2J(ts);
                                     ts.status = J2S(w);
                                     ts.status = S2J(ts.status);
                                     delete ts.status.user;
-                                U[ts.screen_name] = ts;
-                                db.salva('profile_view', J2S(U));
+                                    U[ts.screen_name] = ts;
+                                    db.salva('profile_view', J2S(U));
+                                }
+                                //
                                 novs = n;
                               });
+                              Chrowety[_NAME_].SinceTrava = null;
                               time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               console.log('Since++ '+novs);
                               Chrowety[_NAME_].ultimo = taid;
                               console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
                               Chrowety[_NAME_].Notify(novs);
-                };
+                }
                 Since.erro = function(){
+                    Chrowety[_NAME_].SinceTrava = null;
                     console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
-                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
-                };
+                    window.setTimeout('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                }
                 Since.initOAuth();
+                Chrowety[_NAME_].SinceTrava = true;
         },
         Max:function(max){ // Rate Limited
             var _NAME_ = 'home';
@@ -1321,19 +1587,21 @@ var Chrowety = {
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //> Salva o perfil
                                 var U = S2J(db.pega('profile_view'));
-                                var ts = J2S(w.user);
-                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                if(!U[w.user.screen_name]){
+                                    var ts = J2S(w.user);
+                                    ts = S2J(ts);
                                     ts.status = J2S(w);
                                     ts.status = S2J(ts.status);
                                     delete ts.status.user;
-                                U[ts.screen_name] = ts;
-                                db.salva('profile_view', J2S(U));
+                                    U[ts.screen_name] = ts;
+                                    db.salva('profile_view', J2S(U));
+                                }
+                                //
                               });
                               Chrowety[_NAME_].primeiro = taid;
                               Popup().ShowMoreOK(re, _NAME_);
-                              //eval('Popup().'+callback);
                               console.log('Chrowety.'+_NAME_+'.Max() > Pegou do Online');
                 };
                 Max.erro = function(){
@@ -1356,26 +1624,32 @@ var Chrowety = {
         ultimo:null,
         primeiro:null,
         primeiro_lista:null,
+        RunTrava: null,
+        SinceTrava: null,
 
         Notify:function(n){
             var _NAME_ = 'mentions';
             tws[_NAME_].new_count += n;
+            try{Popup().LT.HideLoad()}catch(e){}
             if(tws[_NAME_].new_count > 0){
                 var c = tws[_NAME_].new_count;
-                var d = tws[_NAME_].new_count+c;
-                chrome.browserAction.setBadgeText({text:''+c});
-                if(n){Alerts(_NAME_, n)}
+                MostraCount();
+                if(n){
+                  Alerts(_NAME_, n);
+                }
                 try{
-                  Popup().RefreshResult(d, _NAME_);
+                    Popup().RefreshResult(c, _NAME_);
                 }catch(e){}
-                console.log('Chrowety.'+_NAME_+'.Notify(): '+d);
-                //ContaTweets(_NAME_);
+                console.log('Chrowety.'+_NAME_+'.Notify(): '+c);
             }
         },
 
         Run:function(callback){ // Rate Limited
             var _NAME_ = 'mentions';
             if(!api_limit){return false}
+            if(Chrowety[_NAME_].RunTrava){
+              return;
+            }
             console.log('Chrowety.'+_NAME_+'.Run()');
             var Run = new Request(api[_NAME_](), 'get');
                 Run.dados = {count:config.start_count[_NAME_]};
@@ -1388,27 +1662,43 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = true;
-                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //> Salva o perfil
+                                var U = S2J(db.pega('profile_view'));
+                                if(!U[w.user.screen_name]){
+                                    var ts = J2S(w.user);
+                                    ts = S2J(ts);
+                                    ts.status = J2S(w);
+                                    ts.status = S2J(ts.status);
+                                    delete ts.status.user;
+                                    U[ts.screen_name] = ts;
+                                    db.salva('profile_view', J2S(U));
+                                }
+                                //
                                 if(n == 0){Chrowety[_NAME_].primeiro_lista = taid}
                               });
                               Chrowety[_NAME_]._loaded = true;
                               Chrowety[_NAME_].ultimo = taid;
-                              //ContaTweets(_NAME_);
                               time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               if(callback){
                                 try{eval('Popup().'+callback)}catch(e){}
                               }
+                              Chrowety[_NAME_].RunTrava = null;
                 };
                 Run.erro = function(){
-                    console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
+                    //Chrowety[_NAME_].Run(callback);
+                    window.setTimeout('Chrowety.'+_NAME_+'.Run(\''+callback+'\')', m(1));
+                    Chrowety[_NAME_].RunTrava = null;
                 };
                 Run.initOAuth();
+                Chrowety[_NAME_].RunTrava = true;
         },
         Since:function(since){ // Rate Limited
             var _NAME_ = 'mentions';
             if(!api_limit){return false}
-            clearInterval(time[_NAME_])
+            if(Chrowety[_NAME_].SinceTrava){
+              return;
+            }
+            clearInterval(time[_NAME_]);
             console.log('Chrowety.'+_NAME_+'.Since()');
             ContaTweets(_NAME_);
             var last = since ? since : Chrowety[_NAME_].ultimo;
@@ -1418,6 +1708,9 @@ var Chrowety = {
                 Since.sucesso = function(json,s){
                               var id;
                               $.each(json,function(n,w){
+                                if(fec.ByTid(_NAME_, w.id)){
+                                    return;
+                                }
                                 n++;
                                 taid = w.id;
                                 id = w.retweeted_status ? w.retweeted_status.id : w.id;
@@ -1425,17 +1718,19 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = false;
-                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                Utils.Tweet.DetectSaveMention(w, _NAME_);
                                 //> Salva o perfil
                                 var U = S2J(db.pega('profile_view'));
-                                var ts = J2S(w.user);
-                                    ts = S2J(ts); // POG pra tirar relacionamento
+                                if(!U[w.user.screen_name]){
+                                    var ts = J2S(w.user);
+                                    ts = S2J(ts);
                                     ts.status = J2S(w);
                                     ts.status = S2J(ts.status);
                                     delete ts.status.user;
-                                U[ts.screen_name] = ts;
-                                db.salva('profile_view', J2S(U));
+                                    U[ts.screen_name] = ts;
+                                    db.salva('profile_view', J2S(U));
+                                }
+                                //
                                 novs = n;
                               });
                               time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
@@ -1443,12 +1738,15 @@ var Chrowety = {
                               Chrowety[_NAME_].ultimo = taid;
                               console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
                               Chrowety[_NAME_].Notify(novs);
+                              Chrowety[_NAME_].SinceTrava = null;
                 };
                 Since.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
-                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                    window.setTimeout('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                    Chrowety[_NAME_].SinceTrava = null;
                 };
                 Since.initOAuth();
+                Chrowety[_NAME_].SinceTrava = true;
         },
         Max:function(max){ // Rate Limited
             var _NAME_ = 'mentions';
@@ -1473,11 +1771,9 @@ var Chrowety = {
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
                               });
                               Chrowety[_NAME_].primeiro = taid;
                               Popup().ShowMoreOK(re, _NAME_);
-                              //eval('Popup().'+callback);
                 };
                 Max.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
@@ -1500,28 +1796,45 @@ var Chrowety = {
         ultimo:null,
         primeiro:null,
         primeiro_lista:null,
+        RunTrava: null,
+        RunSentTrava: null,
+        SinceTrava: null,
 
         Notify:function(n){
             var _NAME_ = 'messages';
             tws[_NAME_].new_count += n;
+            try{Popup().LT.HideLoad()}catch(e){}
             if(tws[_NAME_].new_count > 0){
                 var c = tws[_NAME_].new_count;
-                var d = tws[_NAME_].new_count+c;
-                chrome.browserAction.setBadgeText({text:''+c});
-                if(n){Alerts(_NAME_, n)}
+                MostraCount();
+                if(n){
+                  Alerts(_NAME_, n);
+                }
                 try{
-                  Popup().RefreshResult(d, 'home');
+                    Popup().RefreshResult(c, _NAME_);
                 }catch(e){}
-                console.log('Chrowety.'+_NAME_+'.Notify(): '+d);
-                //ContaTweets(_NAME_);
+                console.log('Chrowety.'+_NAME_+'.Notify(): '+c);
             }
         },
 
-        Run:function(callback){ // Rate Limited
+        Run:function(callback, sent){ // Rate Limited
             var _NAME_ = 'messages';
+            var _ap;
             if(!api_limit){return false}
-            console.log('Chrowety.'+_NAME_+'.Run()');
-            var Run = new Request(api[_NAME_](), 'get');
+            if(sent){
+                _ap = 'messagesSent';
+                if(Chrowety[_NAME_].RunSentTrava){
+                  return;
+                }
+            }
+            else{
+                _ap = 'messages';
+                if(Chrowety[_NAME_].RunTrava){
+                  return;
+                }
+            }
+            console.log('Chrowety.'+_ap+'.Run()');
+            var Run = new Request(api[_ap](), 'get');
                 Run.dados = {count:config.start_count[_NAME_]};
                 Run.sucesso = function(json,s){
                               var id;
@@ -1532,26 +1845,48 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = true;
-                                ht = LayoutMessage(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
                                 if(n == 0){Chrowety[_NAME_].primeiro_lista = taid}
                               });
                               Chrowety[_NAME_]._loaded = true;
                               Chrowety[_NAME_].ultimo = taid;
-                              //ContaTweets(_NAME_);
                               time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               if(callback){
                                 try{eval('Popup().'+callback)}catch(e){}
                               }
-                };
+                              if(sent){
+                                  Chrowety[_NAME_].RunSentTrava = null;
+                              }
+                              else{
+                                  Chrowety[_NAME_].RunTrava = null;
+                              }
+                }
+
                 Run.erro = function(){
-                    console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
-                };
+                    console.log('Chrowety.'+_ap+'.Run() > FAIL');
+                    if(sent){
+                        Chrowety[_NAME_].RunSentTrava = null;
+                        window.setTimeout('Chrowety.'+_NAME_+'.Run(\''+callback+'\', true)', m(1));
+                    }
+                    else{
+                        Chrowety[_NAME_].RunTrava = null;
+                        window.setTimeout('Chrowety.'+_NAME_+'.Run(\''+callback+'\')', m(1));
+                    }
+                }
+
                 Run.initOAuth();
+                if(sent){
+                    Chrowety[_NAME_].RunSentTrava = true;
+                }
+                else{
+                    Chrowety[_NAME_].RunTrava = true;
+                }
         },
         Since:function(since){// Rate Limited
             var _NAME_ = 'messages';
             if(!api_limit){return false}
+            if(Chrowety[_NAME_].SinceTrava){
+              return;
+            }
             clearInterval(time[_NAME_])
             console.log('Chrowety.'+_NAME_+'.Since()');
             ContaTweets(_NAME_);
@@ -1569,30 +1904,22 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = false;
-                                ht = LayoutMessage(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
-                                //> Salva o perfil
-                                var U = S2J(db.pega('profile_view'));
-                                var ts = J2S(w.user);
-                                    ts = S2J(ts); // POG pra tirar relacionamento
-                                    ts.status = J2S(w);
-                                    ts.status = S2J(ts.status);
-                                    delete ts.status.user;
-                                U[ts.screen_name] = ts;
-                                db.salva('profile_view', J2S(U));
                                 novs = n;
                               });
+                              Chrowety[_NAME_].SinceTrava = null;
                               time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                               console.log('Since++ '+novs);
                               Chrowety[_NAME_].ultimo = taid;
                               //console.log('Chrowety.'+_NAME_+'.Since() > New '+novs+' tweets');
-                              //Chrowety[_NAME_].Notify(novs);
+                              Chrowety[_NAME_].Notify(novs);
                 };
                 Since.erro = function(){
-                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
+                    window.setTimeout('Chrowety.'+_NAME_+'.Since()', m(config.refresh[_NAME_]));
                     console.log('Chrowety.'+_NAME_+'.Since() > FAIL');
+                    Chrowety[_NAME_].SinceTrava = null;
                 };
                 Since.initOAuth();
+                Chrowety[_NAME_].SinceTrava = true;
         },
         Max:function(max){// Rate Limited
             var _NAME_ = 'messages';
@@ -1617,11 +1944,10 @@ var Chrowety = {
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
                               });
                               Chrowety[_NAME_].primeiro = taid;
                               Popup().ShowMoreOK(re, _NAME_);
-                              //eval('Popup().'+callback);
                 };
                 Max.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Max() > FAIL');
@@ -1643,16 +1969,19 @@ var Chrowety = {
         ultimo:null,
         pagina:1,
         primeiro_lista:null,
+        RunTrava: null,
+        SinceTrava: null,
 
         Notify:function(n){
             var _NAME_ = 'messages';
             tws[_NAME_].new_count += n;
+            try{Popup().LT.HideLoad()}catch(e){}
             if(tws[_NAME_].new_count > 0){
                 var c = tws[_NAME_].new_count;
                 var d = tws[_NAME_].new_count+c;
                 chrome.browserAction.setBadgeText({text:''+c});
                 try{
-                  Popup().RefreshResult(d, 'home');
+                  Popup().RefreshResult(d, _NAME_);
                 }catch(e){}
                 console.log('Chrowety.'+_NAME_+'.Notify(): '+d);
                 //ContaTweets(_NAME_);
@@ -1662,6 +1991,9 @@ var Chrowety = {
         Run:function(callback){// Rate Limited
             var _NAME_ = 'favorites';
             if(!api_limit){return false}
+            if(Chrowety[_NAME_].RunTrava){
+              return;
+            }
             console.log('Chrowety.'+_NAME_+'.Run()');
             tws[_NAME_].total = 0;
             var Run = new Request(api[_NAME_](), 'get');
@@ -1675,8 +2007,8 @@ var Chrowety = {
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
                                 tws[_NAME_].tweets[tws[_NAME_].total].read = true;
-                                ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //ht = Layout(tws[_NAME_].tweets[tws[_NAME_].total], _NAME_);
+                                //tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
                                 var U = S2J(db.pega('profile_view'));
                                 var ts = J2S(w.user);
                                     ts = S2J(ts); // POG pra tirar relacionamento
@@ -1693,13 +2025,17 @@ var Chrowety = {
                               if(callback){
                                 try{eval('Popup().'+callback)}catch(e){}
                               }
+                              Chrowety[_NAME_].RunTrava = null;
                 };
                 Run.erro = function(){
                     console.log('Chrowety.'+_NAME_+'.Run() > FAIL');
                     clearInterval(time[_NAME_]);
-                    time[_NAME_] = setInterval('Chrowety.'+_NAME_+'.Run()', m(config.refresh[_NAME_]));
+                    //Chrowety[_NAME_].Run(callback);
+                    window.setTimeout('Chrowety.'+_NAME_+'.Run(\''+callback+'\')', m(1));
+                    Chrowety[_NAME_].RunTrava = null;
                 };
                 Run.initOAuth();
+                Chrowety[_NAME_].RunTrava = true;
         },
 
         Max:function(pag){// Rate Limited
@@ -1721,7 +2057,7 @@ var Chrowety = {
                                 re = re+ht;
                                 tws[_NAME_].total++;
                                 tws[_NAME_].tweets[tws[_NAME_].total] = w;
-                                tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
+                                //tws[_NAME_].tweets[tws[_NAME_].total].html = ht;
                               });
                               Popup().ShowMoreOK(re, _NAME_);
                 };
@@ -1739,6 +2075,8 @@ var Chrowety = {
 function LayoutMessage(w, time){
   var user = w.sender.screen_name,
   nome = w.sender.name,
+  destino = w.recipient.screen_name;
+  destinoNome = w.recipient.name;
   txt =  w.text,
   foto = w.sender.profile_image_url,
   data = w.created_at,
@@ -1750,36 +2088,33 @@ function LayoutMessage(w, time){
   }else{
       var reply_backup = '';
   }
-  //Links de Usuarios
-  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" onclick="ShowUser(\'$2\')">$2</a>');
-  //Links de Tags
-  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
 
-  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
+  txt = Utils.Regex.Replace(txt);
 
   r =
-  '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
+  '<div id="tweply_'+tid+'" class="tweply">' +
             '<div class="twet '+read+'">' +
                 '<div class="text">' +
                     '<input id="tid_'+tid+'" value="'+tid+'" type="hidden" />' +
                     '<input id="user_'+tid+'" value="'+user+'" type="hidden" />' +
                     '<input id="data_'+tid+'" value="'+data+'" type="hidden" />' +
-                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
-                      '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
+                    '<a title="'+nome+' ('+user+')" href="#" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
+                      '<img class="photo" src="'+foto+'" width="45" height="45" />' +
                     '</a>' +
                     '<div class="fr">'+
                         '<a title="'+Traduz('translate_this_tweet')+'" onclick="Traduzir('+tid+', \''+time+'\');" class="trans opts">Hover</a>'+
                     '</div>'+
-                    '<span class="tweets_names dn" ><a class="usuario" title="'+user+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: </span>'+
+                    '<span title="'+nome+' ('+user+')" class="tweets_names dn" ><a class="usuario" href="#" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: </span>'+
                     '<span id="texto_'+tid+'" class="texwt" data="'+escape(w.text)+'" html="'+escape(txt)+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
                     '<span title="'+tid+'" class="cinza p8 tweetdata" data="'+data+'"></span>' +
-                    '<a onclick="DeletaDM('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' +
+                    ' '+Traduz('to').toLowerCase()+': <a class="usuario" title="'+destinoNome+'" href="#" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+destino+'\')">'+destino+'</a></span>'+
+                    '<img id="deleta_load_'+tid+'" class="dn fr" /><span class="opts fr"><a id="deleta_button_'+tid+'" onclick="DeletaDM('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a></span>' +
                 '</div>' +
-                '<a onclick="ReplyDM('+tid+', \''+time+'\');" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
+                '<a onclick="ReplyDM('+tid+', \''+time+'\', true);" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
-            '<div id="reply_'+tid+'" class="reply dn dm" title="'+Traduz('reply')+' '+user+'">' +
+            '<div id="reply_'+tid+'" class="reply dn dm">' +
               '<!--<div class="dm_title">'+
                 '<span class="dm_text">DM</span> '+
                 '<span class="dm_to">to</span> '+
@@ -1787,6 +2122,7 @@ function LayoutMessage(w, time){
               '</div><br />-->'+
               '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
               '<span id="reply_rt_'+tid+'" class="dn">' +
+                 '<button title="'+Traduz('special_chars')+'" class="button fl bt_char" onclick="SpecialChars.show(\''+tid+'\', \''+time+'\');">&hellip;</button>'+
                  '<span class="short" title="'+Traduz('url_shortener')+'"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
                  '<button class="button_margin" id="botao_'+tid+'" onclick="doReplyDM('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Enter)">'+Traduz('done')+'</button>' +
                  '<a onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
@@ -1810,43 +2146,58 @@ function Layout(w, time, list){
   foto = w.user.profile_image_url,
   data = w.created_at,
   source = w.source,
-  tid = w.id;
-
+  tid =  w.id;
+  tid_ = w.id;
   read = w.read ? 'read' : 'unread';
 
-  var in_reply = w.in_reply_to_status_id ? '<a class="cinza p8" href="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" onclick="Link(this, event);" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
+  var in_reply = w.in_reply_to_status_id ? '<a class="cinza p8" href="#" nohref="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" onclick="Link(this, event);" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
   var Retweeted = '';
   var RT  = '<a onclick="Retweet('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
-  //var RT = '<a onclick="RetweetOficial('+tid+');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
+  var Mentionado = (txt.indexOf('@'+db.pega('user')) != -1) ? ( time == "home" ? "mentionado" : "") : "";
+  var del = db.pega('user') == user ? '<img id="deleta_load_'+tid+'" class="dn fr" /><span class="opts fr"><a id="deleta_button_'+tid+'" onclick="Deleta('+tid+', \''+time+'\');" class="lixo" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a></span>' : '';
+  var GEO = '';
 
   if(w.user.protected){
     txt = '<span class="cadeado" title="Protected"></span> '+txt;
   }
 
-  var Mentionado = (txt.indexOf(db.pega('user')) != -1) ? ( time == "home" ? "mentionado" : "") : "";
-
+  if(w.retweeted_by_me){
+    var rt_user = db.pega('user');
+    Retweeted = '<span id="retweeted_status_'+tid+'"><br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><span id="retweeted_status_by_me_'+tid+'"><a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')" title="'+rt_user+'">'+Traduz('you')+'</a></span></span>';
+    RT  = '<a onclick="Deleta('+tid+', \''+time+'\', '+w.retweeted_by_me_status+');" class="opts fr" title="'+Traduz('undo_retweet')+'">'+Traduz('undo_retweet')+'</a>';
+  }
 
   if(w.retweeted_status){
     rt_user = w.user.screen_name;
+    rt_user_ = rt_user;
+
     user = w.retweeted_status.user.screen_name;
     nome = w.retweeted_status.user.name;
     txt = w.retweeted_status.text;
     foto = w.retweeted_status.user.profile_image_url;
     data = w.retweeted_status.created_at;
     source = w.retweeted_status.source;
-    tid = w.retweeted_status.id;
-    in_reply = w.retweeted_status.in_reply_to_status_id ?
-    '<a class="cinza p8" href="http://twitter.com/'+w.retweeted_status.in_reply_to_screen_name+'/status/'+w.retweeted_status.in_reply_to_status_id+'" onclick="Link(this, event);" title="'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'</a>'
-    : '';
-    if(w.user.protected){
-      txt = '<span class="cadeado" title="Protected"></span> '+txt;
-    }
-    txt = '<span class="rts" title="'+Traduz('retweeted_by')+' '+rt_user+'">Retweeted</span> <a class="reter" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a> '+txt;
-    Retweeted = '<br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')">'+rt_user+'</a>';
-    Retweeted += ' <span class="opts2">(<span class="cinza p8 tweetdata" data="'+w.created_at+'"></span>)</span>';
+//    tid = w.retweeted_status.id;
+    tid = w.id;
+    tid_ = w.retweeted_status.id;
     RT = '<a onclick="RetweetRT('+tid+', \''+time+'\');" class="opts fr" title="'+Traduz('retweet')+'">'+Traduz('retweet')+'</a>';
-  }
 
+    in_reply = w.retweeted_status.in_reply_to_status_id ?
+    '<a class="cinza p8" href="#" nohref="http://twitter.com/'+w.retweeted_status.in_reply_to_screen_name+'/status/'+w.retweeted_status.in_reply_to_status_id+'" onclick="Link(this, event);" title="'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.retweeted_status.in_reply_to_screen_name+'</a>'
+    : '';
+
+    txt = '<span class="rts" title="'+Traduz('retweeted_by')+' '+rt_user+'">Retweeted</span> <a class="reter" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a> '+txt;
+    Retweeted = '<span id="retweeted_status_'+tid+'"><br /><span class="cinza p8" title="'+Traduz('retweeted_by')+' '+rt_user+'">'+Traduz('retweeted_by')+' </span><span id="retweeted_status_by_other_'+tid+'"><a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')" title="'+rt_user+'">'+rt_user_+'</a></span';
+    if(w.retweeted_by_me){
+      var rt_user = db.pega('user');
+      Retweeted += '<span id="retweeted_status_by_me_'+tid+'">, <a class="reter p8" nohref="http://twitter.com/'+rt_user+'" onclick="ShowUser(\''+rt_user+'\')" title="'+rt_user+'">'+Traduz('you')+'</a></span></span>';
+      RT  = '<a onclick="Deleta('+tid+', \''+time+'\', '+w.retweeted_by_me_status+');" class="opts fr" title="'+Traduz('undo_retweet')+'">'+Traduz('undo_retweet')+'</a>';
+    }else{
+      Retweeted += '</span>';
+    }
+    Retweeted += ' <span class="opts2">(<span class="cinza p8 tweetdata" data="'+w.created_at+'"></span>)</span>';
+
+  }
 
   RT = db.pega('user') == user ? '' : RT;
 
@@ -1855,41 +2206,15 @@ function Layout(w, time, list){
 
   var dm = db.pega('user') == user ? '' : '<a class="msg opts" onclick="ReplyDM('+tid+', \''+time+'\', true)" title="DM '+Traduz('to')+' '+user+'">'+Traduz('messages')+'</a>';
 
-  var del = db.pega('user') == user ? '<a onclick="Deleta('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' : '';
-
-  // Links Normais
-  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
-
-  //Twitpic
-  txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
-
-  //Tweetphoto | Pic.gd
-  txt = txt.replace(/((https?):\/\/(tweetphoto.com\/|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
-
-  //YouTube http://www.youtube.com/watch?v=sG5lpGdNd5E
-  txt = txt.replace(/((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
-
-  //Youtu.be
-  txt = txt.replace(/((https?):\/\/(youtu.be\/|www.youtu.be\/)([-_a-zA-Z_0-9]*|$)([?_a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" onclick="Youtube(\'$4\');">$1</a>');
-	  
-  //Links sem Http
-  txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" onclick="Link(this, event);">$2</a> ');
-
-  //Links de Usuarios
-  txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
-
-  // Links Normais
-  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
-
-  //Links de Tags
-  txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+  txt = Utils.Regex.Replace(txt);
 
   txt = txt.replace('>@'+db.pega('user'), ' class="usuario photo bold">@'+db.pega('user'));
 
   w.html_tweet = txt;
   source = source.replace('rel=\"nofollow\"', 'class="cinza p8 source" onclick="Link(this, event);"');
+  source = source.replace('href=', 'href="#" nohref=');
   var careator = !w.retweeted_status ?
-                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+
+                    '<a title="'+nome+' ('+user+')" href="#" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+
                         '<span class="creator">'+user+'</span>'+
                     '</a><br />' : '';
   var creator = '';
@@ -1903,15 +2228,22 @@ function Layout(w, time, list){
     var cdn = 'dn';
   }
 
+  if(w.geo){
+    if(w.geo.coordinates){
+        var coo = w.geo.coordinates.join(',');
+        GEO = '<a title="'+Traduz('show_geo_location')+'" onclick="Map(\''+coo+'\', '+tid+', \''+time+'\');" class="location">Geo</a>';
+    }
+  }
+
   r =
-  '<div id="tweply_'+tid+'" class="tweply" title="'+nome+' ('+user+')">' +
+  '<div id="tweply_'+tid+'" class="tweply">' +
             '<div class="twet '+read+' '+Mentionado+'">' +
                 '<div class="text">' +
                     '<input id="tid_'+tid+'" value="'+tid+'" type="hidden" />' +
                     '<input id="user_'+tid+'" value="'+user+'" type="hidden" />' +
                     '<input id="data_'+tid+'" value="'+data+'" type="hidden" />' +
-                    '<a title="'+nome+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
-                      '<img class="photo" alt="'+nome+'\'s Picture" title="'+nome+' Avatar" src="'+foto+'" width="45" height="45" />' +
+                    '<a title="'+nome+' ('+user+')" href="#" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')" class="fl">' +
+                      '<img class="photo" alt="'+nome+'\'s Picture" src="'+foto+'" width="45" height="45" />' +
                     '</a>' +
                     creator+
                     '<div class="fr">'+
@@ -1919,23 +2251,26 @@ function Layout(w, time, list){
                         dm+
                         '<a title="'+Traduz('translate_this_tweet')+'" onclick="Traduzir('+tid+', \''+time+'\');" class="trans opts">Hover</a>'+
                     '</div>'+
-					(!w.retweeted_status ? '<span class="tweets_names dn" ><a class="usuario" title="'+user+'" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: </span>':'')+
+					(!w.retweeted_status ? '<span class="tweets_names dn" ><a class="usuario" title="'+nome+' ('+user+')" href="#" nohref="http://twitter.com/'+user+'" onclick="ShowUser(\''+user+'\')">'+user+'</a>: </span>':'')+
                     '<span id="texto_'+tid+'" class="texwt" data="'+classic_txt+'" html="'+escape(txt)+'">'+txt+'</span>' +
                 '</div>' +
                 '<div class="cinza">' +
-                    '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" onclick="Link(this, event);" data="'+data+'"></a></span>' +
-                    ' <span class="cinza p8">via</span> '+source+' ' +
-                    in_reply +
-					Retweeted +
-                    RT +
-                    del +
-                    
+                    '<span>'+GEO+'<a title="'+tid+'" class="cinza p8 tweetdata" href="#" nohref="http://twitter.com/'+user+'/status/'+tid_+'" onclick="Link(this, event);" data="'+data+'"></a></span>' +
+                    '<span id="data_rt_'+tid+'">'+
+                        ' <span class="cinza p8">'+Traduz('from')+'</span> '+source+' ' +
+                        in_reply +
+    					Retweeted +
+                    '</span>'+
+                    '<span id="data_retweet_'+tid+'">'+
+                        RT +
+                        del +
+                    '</span>'+
                 '</div>' +
                 '<a tid="'+tid+'" time="'+time+'" onclick="Reply('+tid+', false, \''+time+'\');" class="r click_to_reply" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
 
-            '<div id="reply_'+tid+'" class="reply '+cdn+'" title="'+Traduz('reply')+' '+user+'">' +
-              '<textarea onkeydown="Atalho(evt, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p8" backup="'+reply_backup+'"></textarea><br />' +
+            '<div id="reply_'+tid+'" class="reply '+cdn+'">' +
+              '<textarea onkeydown="Atalho(event, '+tid+', \''+time+'\')" onkeyup="Count('+tid+', \''+time+'\')" id="reply_text_'+tid+'" class="p10" backup="'+reply_backup+'"></textarea><br/>' +
               '<span id="retweet_choice_'+tid+'" class="dn">' +
                   '<br />'+
                   '<button class="button_margin" id="rt_now_'+tid+'" onclick="RetweetOficial('+tid+', \''+time+'\')" title="'+Traduz('retweet_now')+'">'+Traduz('retweet_now')+'</button>' +
@@ -1943,8 +2278,9 @@ function Layout(w, time, list){
                   '<a onclick="ReplyCancel('+tid+', \''+time+'\')" class="p8" title="'+Traduz('cancel')+'">'+Traduz('cancel')+'</a>' +
               '</span>' +
               '<span id="reply_rt_'+tid+'" class="dn">' +
+                 '<button title="'+Traduz('special_chars')+'" class="button fl bt_char" onclick="SpecialChars.show(\''+tid+'\', \''+time+'\');">&hellip;</button>'+
                  '<span class="short" title="'+Traduz('url_shortener')+'"><button onclick="ShortLink('+tid+', \''+time+'\')"  class="button fl"><img src="img/link.png" height="16" /></button><input onfocus="ShowShortLink('+tid+', \''+time+'\')" _onblur="HideShortLink('+tid+')" active="false" class="short_link_url fl" id="short_link_url_'+tid+'" type="text" /></span><br class="cb"/>' +
-                 '<button class="button_margin" id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Ctrl + Enter)">'+Traduz('done')+'</button>' +
+                 '<button class="button_margin" id="botao_'+tid+'" onclick="doReply('+tid+', \''+time+'\');" title="'+Traduz('done')+' (Enter)">'+Traduz('done')+'</button>' +
                  '<a id="botao_'+tid+'_cancel" onclick="ReplyCancel('+tid+', \''+time+'\')" title="'+Traduz('cancel')+'" class="p8">'+Traduz('cancel')+'</a>' +
               '</span>' +
               '<span id="count_'+tid+'" class="reply_left p13">140</span>' +
@@ -1956,14 +2292,26 @@ function Layout(w, time, list){
 
 
 function LayoutPage(w, time){
-  var user = w.user.screen_name,
-  nome = w.user.name,
-  classic_txt = w.retweeted_status ? w.text : '';
-  txt = w.retweeted_status ? w.retweeted_status.text : w.text,
-  foto = w.user.profile_image_url,
-  data = w.created_at,
-  source = w.source,
-  tid = w.id;
+  if(time == 'messages'){
+      var user = w.sender.screen_name,
+      nome = w.sender.name,
+      classic_txt = '';
+      txt =  w.text,
+      foto = w.sender.profile_image_url,
+      data = w.created_at,
+      source = '',
+      tid = w.id;
+  }else{
+      var user = w.user.screen_name,
+      nome = w.user.name,
+      classic_txt = w.retweeted_status ? w.text : '';
+      txt = w.retweeted_status ? w.retweeted_status.text : w.text,
+      foto = w.user.profile_image_url,
+      data = w.created_at,
+      source = w.source,
+      tid = w.id;
+  }
+
 
   read = w.read ? 'read' : 'unread';
 
@@ -1997,7 +2345,7 @@ function LayoutPage(w, time){
   var del = db.pega('user') == user ? '<a onclick="Deleta('+tid+', \''+time+'\');" class="lixo opts fr" title="'+Traduz('delete')+'">'+Traduz('delete')+'</a>' : '';
 
   // Links Normais
-  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
+  txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com\/watch\?v=)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);" target="_blank">$2</a> ');
 
   //Twitpic
   txt = txt.replace(/((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,' <a class="url" nohref="$1" title="$1" target="_blank">$1</a>');
@@ -2056,26 +2404,276 @@ function LayoutPage(w, time){
                 '</div>' +
                 '<div class="cinza">' +
                     '<span><a title="'+tid+'" class="cinza p8 tweetdata" href="http://twitter.com/'+user+'/status/'+tid+'" target="_blank" data="'+data+'">'+TweetData(data)+'</a></span>' +
-                    ' via '+source+' ' +
+                    (time == 'messages' ? '' : ' via '+source+' ') +
                     in_reply +
-                    //RT +
-                    //del +
                     Retweeted +
                     '<span class="fr">'+Traduz(time)+'</span>' +
                 '</div><br />' +
-                //'<a class="click_to_reply" tid="'+tid+'" time="'+time+'" class="r" title="'+Traduz('reply')+' '+user+'">'+Traduz('reply')+'</a>' +
             '</div>' +
     '</div><br />';
   return r;
 }
 
-function pause(milliseconds) {
+function pause(ms) {
 	var dt = new Date();
-	while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
+	while ((new Date()) - dt <= ms){}
 }
 
+function LayoutNotifications(w, time){
+    if(time == 'messages'){
+        var user = w.sender.screen_name,
+        tid = w.id,
+        nome = w.sender.name,
+        classic_txt = '';
+        txt =  w.text,
+        foto = w.sender.profile_image_url,
+        data = '<span class="data">'+TweetData(w.created_at)+'</span>',
+        from = '',
+        source = '';
+    }else{
+        var user = w.user.screen_name,
+        tid = w.id,
+        nome = w.user.name,
+        classic_txt = w.retweeted_status ? w.text : '';
+        txt = w.retweeted_status ? 'RT @'+w.retweeted_status.user.screen_name+': '+w.retweeted_status.text : w.text,
+        foto = w.user.profile_image_url,
+        data = '<a href="http://twitter.com/'+user+'/status/'+tid+'" target="_blank" class="data">'+TweetData(w.created_at)+'</a>',
+        from = Traduz('from'),
+        source = w.source;
+    }
+
+    source = source.replace('rel=\"nofollow\"', 'class="data" target="_blank"');
+
+    txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" target="_blank" onclick="load()">$2</a> ');
+    txt = txt.replace(/(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="http://$2" target="_blank" onclick="load()">$2</a> ');
+    txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="user" title="$2" href="http://twitter.com/$2" target="_blank" onclick="load()">$2</a>');
+    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" target="_blank" onclick="load()">$3</a>');
+
+    var in_reply = w.in_reply_to_status_id ? '<a class="data" href="http://twitter.com/'+w.in_reply_to_screen_name+'/status/'+w.in_reply_to_status_id+'" target="_blank" title="'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'">'+Traduz('in_reply_to')+' '+w.in_reply_to_screen_name+'</a>' : '';
+
+    var Timeout = s(config.desktop_notifications_timeout);
+
+    var Lay =
+        '<scr'+'ipt>Timeout = '+Timeout+';</scr'+'ipt>'+
+        '<div class="tweet">'+
+            '<a title="'+nome+'" href="http://twitter.com/'+user+'" target="_blank" class="nome">'+
+                '<img class="foto fl" src="'+foto+'" width="45" height="45" />'+
+                user+
+            '</a>'+
+            '<div class="texto">'+
+                txt+
+            '</div>'+
+            '<div class="cb">'+
+                '<span class="fl">'+
+                    data+
+                    '<span class="data"> '+from+' </span>'+
+                    '<a class="data">'+source+'</a>'+
+                '</span>'+
+                '<span class="data fr">'+Traduz(time)+'</span>'+
+            '</div>'+
+            '<br />'+
+        '</div>'
+    ;
+    return Lay;
+}
+
+function Alerts(tm, n){
+  Utils.Notify.Build(n,tm);
+
+  if(config.audio_alerta == "true"){
+      if(AlertaAudioFile.src){
+        AlertaAudioFile.play();
+      }
+      else{
+        AlertaAudioFile.src = api.audio;
+        AlertaAudioFile.play();
+      }
+  }
+
+  if(config.alerts == "true"){
+      chrome.windows.getAll({}, function(w){
+            chrome.tabs.getSelected(w[0].id, function(Taby){
+                if(!Taby.url.match('chrome-extension://') && !Taby.url.match('chrome://')){
+                    chrome.tabs.executeScript(Taby.id, {
+                           file: 'js/jquery-1.4.2.min.js'
+                          }, function() {
+                              chrome.tabs.insertCSS(Taby.id, {
+                                     file: 'css/base_pagina.css'
+                                    }, function() {
+                                        chrome.tabs.executeScript(Taby.id, {code:
+                                          'var _NAME_ = "'+tm+'"; var _TOTAL_ = "'+n+'";var _MAX_ = "'+config.alerts_max+'"; var _Alerts_ = "'+Traduz('alerts')+'";'
+                                        });
+                                        chrome.tabs.executeScript(Taby.id, {
+                                               file: 'js/script.js'
+                                        });
+                                    }
+                              );
+                          }
+                    );
+                }
+            });
+      });
+  }
+}
+
+var RGX = {
+  link: /(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?^twitpic^tweetphoto^pic.gd^youtube.com^yfrog.com^yfrog.us^twitgoo.com\/watch\?v=)(\s|&gt;|$)/g,
+  twitpic: /((https?):\/\/twitpic.com\/([a-zA-Z_0-9]*|$))/g,
+  twigoo: /((https?):\/\/twitgoo.com\/([a-zA-Z_0-9]*|$))/g,
+  yfrog: /((https?):\/\/(yfrog.com|yfrog.us)\/([a-zA-Z_0-9]*|$))/g,
+  picgd: /((https?):\/\/(tweetphoto.com\/|www.tweetphoto.com\/|pic.gd\/)([a-zA-Z_0-9]*|$))/g,
+  youtube: /((https?):\/\/(www.youtube.com\/watch\?v=|youtube.com\/watch\?v=)([*a-zA-Z_0-9-]*|$)([&_a-zA-Z_0-9-=]*|$))/g,
+  twitcam: /((https?):\/\/(www.twitcam.com\/|twitcam.com\/)([\)*a-zA-Z_0-9-]*|$))/g,
+  twitvid: /((https?):\/\/(www.twitvid.com\/|twitvid.com\/)([\)*a-zA-Z_0-9-]*|$))/g,
+  vimeo: /((https?):\/\/(www.vimeo.com\/|vimeo.com\/)([0-9]*|$))/g,
+  youtu: /((https?):\/\/(youtu.be\/|www.youtu.be\/)([*a-zA-Z_0-9-]*|$)([?_a-zA-Z_0-9-=]*|$))/g,
+  nohttp: /(^|&lt;|\s)((www).+?)(\s|&gt;|$)/g,
+  link2: /(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,
+  user: /(@|$)([a-zA-Z_0-9]{1,20}|$)/g,
+  hash: /(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g
+}
 
 var Utils = {
+
+    Tweet: {
+        DetectSaveMention:function(TweetObj, from){//Utils.Tweet.DetectSaveMention()
+            if(typeof TweetObj != 'object'){
+                return false;
+            }
+            var w = TweetObj,tm;
+            if(from == 'home'){
+                tm = 'mentions'
+            }else if(from == 'mentions'){
+                tm = 'home';
+            }else{
+                return;
+            }
+            if(w.text.indexOf('@'+db.pega('user')) != -1){
+                tws[tm].total++;
+                tws[tm].tweets[tws[tm].total] = w;
+                tws[tm].tweets[tws[tm].total].read = true;
+                return true;
+            }else{
+                return false;
+            }
+        }
+    },
+
+    Drafts: {
+        createTable: function(){
+            if(!db.pega('drafts')){
+                Database.createTable('drafts', ['id INTEGER PRIMARY KEY ASC', 'usuario TEXT', 'texto TEXT', 'data DATETIME'], function(t,r){
+                    db.salva('drafts', true);
+                });
+            }
+        },
+        salva: function(txt){
+            this.createTable();
+            Database.insert('drafts', {usuario: db.pega('user'), texto: txt, data: 'NOW()'});
+        },
+        pega: function(callback){
+            this.createTable();
+            var html = '';
+            Database.select('drafts', null, function(t,re){
+                var total = re.rows.length,item;
+                for(var i=0; i < total; i++){
+                    item = re.rows.item(i);
+                    //console.log(item.texto);
+                    //html += LayoutDraft(item);
+                    html += '<span>'+item.texto+'</span>';
+                }
+                if(typeof callback == 'function') callback(html)
+                return html;
+            });
+        },
+        deleta: function(id){
+            this.createTable();
+            Database.remove('drafts', (id?'WHERE id='+id:null), function(t,re){
+                //re.rowsAffected
+            });
+        }
+    },
+
+    Sistema:{
+        so: null,
+        load:function(){
+            var so, ap = navigator.appVersion;
+            if(ap.indexOf("Win")!=-1){
+                so = "Windows";
+            }
+            else if(ap.indexOf("Mac")!=-1){
+                so = "Mac";
+            }
+            else if(ap.indexOf("Linux")!=-1){
+                so = "Linux";
+            }else{
+                so = 'Seila';
+            }
+            Utils.Sistema.so = so;
+            return so;
+        }
+    },
+
+    Regex:{
+        Replace: function(txt){
+            if(!txt){
+                return txt;
+            }else{
+                var hrf = 'nohref';
+                var clk = true;
+                txt = txt.replace(RGX.link,' <a class="url" title="$2" href="#" nohref="$2" onclick="Link(this, event);">$2</a> ');
+                txt = txt.replace(RGX.twitpic,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
+                txt = txt.replace(RGX.twigoo,' <a class="url" nohref="$1" title="$1" onclick="Twitgoo(\'$3\');">$1</a>');
+                txt = txt.replace(RGX.yfrog,' <a class="url" nohref="$1" title="$1" onclick="Yfrog(\'$4\');">$1</a>');
+                txt = txt.replace(RGX.picgd,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
+                txt = txt.replace(RGX.youtube,' <a class="url" nohref="$1" title="$4" onclick="Youtube(\'$4\');">$1</a>');
+                txt = txt.replace(RGX.twitcam,' <a class="url" nohref="$1" title="$4" onclick="Twitcam(\'$4\');">$1</a>');
+                txt = txt.replace(RGX.twitvid,' <a class="url" nohref="$1" title="$4" onclick="Twitvid(\'$4\');">$1</a>');
+                txt = txt.replace(RGX.vimeo,' <a class="url" nohref="$1" title="$4" onclick="Vimeo(\'$4\');">$1</a>');
+                txt = txt.replace(RGX.youtu,' <a class="url" nohref="$1" title="$4" onclick="Youtube(\'$4\');">$1</a>');
+                txt = txt.replace(RGX.nohttp,' <a class="url" title="$2" href="#" nohref="http://$2" onclick="Link(this, event);">$2</a> ');
+                txt = txt.replace(RGX.user,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
+                txt = txt.replace(RGX.link2,' <a class="url" title="$2" href="#" nohref="$2" onclick="Link(this, event);">$2</a> ');
+                txt = txt.replace(RGX.hash,' $2<a class="tag" title="$3" nohref="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+                return txt;
+            }
+        }
+    },
+
+    FormataNumero: function(nStr){
+    	nStr += '';
+    	x = nStr.split('.');
+    	x1 = x[0];
+    	x2 = x.length > 1 ? '.' + x[1] : '';
+    	var rgx = /(\d+)(\d{3})/;
+    	while (rgx.test(x1)) {
+    		x1 = x1.replace(rgx, '$1' + ',' + '$2');
+    	}
+    	return x1 + x2;
+    },
+
+    Popup:{
+        window:null
+    },
+
+    Notify:{
+        Show:function(data){
+            data = escape(data);
+            var Notf = webkitNotifications.createHTMLNotification(chrome.extension.getURL('alerta.html')+'#'+data);
+            Notf.show();
+        },
+
+        Build:function(n, tm){
+            if(config.desktop_notifications == 'true'){
+                var tws = fec.lastNotifications(tm, n, config.alerts_max), tw;
+                for(i in tws){
+                    tw = tws[i];
+                    this.Show(tw);
+                }
+            }
+        }
+    },
+
     currentURL:null,
 
     GetTabUrl: function(){
@@ -2102,26 +2700,39 @@ var Utils = {
                 document.head.appendChild(JSAPI);
         },
 
-        trans:function(txt, tid, tm){
-            if(!Utils.Translate.loaded){
-                Utils.Translate.load(function(){
-                    Utils.Translate.trans(txt, tid, tm);
+        trans:function(txt, tid, tm, list){
+            if(!this.loaded){
+                this.load(function(){
+                    Utils.Translate.trans(txt, tid, tm, list);
                 });
-                return false;
+                return;
             }
-            var Lingua = config.translate_tweets_to;//config.translation_to;
+
+            if(list){
+                var tweet = fec.ByTid(tm, tid, null, list);
+                if(tweet.translated){
+                    Popup().TraduzirOK(tweet.translated, tid, tm);
+                    return;
+                }
+            }else{
+                var tweet = fec.ByTid(tm, tid);
+                if(tweet.translated){
+                    Popup().TraduzirOK(tweet.translated, tid, tm);
+                    return;
+                }
+            }
+
+
+            var Lingua = config.translate_tweets_to;
             google.language.detect(txt, function(re) {
               if(!re.error && re.language){
                 google.language.translate(txt, re.language, Lingua, function(re){
                   if(re.translation){
-                    //console.log(re.translation);
                     var txt = re.translation;
-                    txt = re.translation.replace('@ ', '@');
-                    txt = re.translation.replace('# ', '#');
-                    txt = txt.replace(/(@|$)([a-zA-Z_0-9]*|$)/g,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
-                    txt = txt.replace(/(^|&lt;|a-zA-Z_0-9|\s)(#|$)([çÇáéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙãõñäëïöüÿÄËÏÖÜÃÕÑâêîôûÂÊÎÔÛ_a-zA-Z_0-9]*|$)/g,' $2<a class="tag" title="$3" href="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
-                    txt = txt.replace(/(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,' <a class="url" title="$2" href="$2" onclick="Link(this, event);">$2</a> ');
-
+                    txt = txt.replace('@ ', '@');
+                    txt = txt.replace('# ', '#');
+                    txt = Utils.Regex.Replace(txt);
+                    tweet.translated = txt;
                     try{
                       Popup().TraduzirOK(txt, tid, tm);
                     }
@@ -2136,7 +2747,7 @@ var Utils = {
               }
             });
 
-        },
+        }
 
     },
 
@@ -2156,7 +2767,7 @@ var Utils = {
                     console.log('Ouve um erro no Untr.im');
                 };
                 Un.init();
-        },
+        }
     },
 
     Short:{
@@ -2167,11 +2778,11 @@ var Utils = {
       short:function(LongUrl, tid, tm, cb){
         switch(config.url_shortener){
             case '3.ly':
-                var LongUrl = encodeURIComponent(LongUrl);
+                LongUrl = encodeURIComponent(LongUrl);
                 Utils.Short.Threely(LongUrl, tid, tm, null, cb);
                 break;
             case 'migre.me':
-                var LongUrl = encodeURIComponent(LongUrl);
+                LongUrl = encodeURIComponent(LongUrl);
                 Utils.Short.MigreMe(LongUrl, tid, tm, cb);
                 break;
             case 'goo.gl':
@@ -2184,15 +2795,23 @@ var Utils = {
                 Utils.Short.BitLy(LongUrl, tid, tm, true, cb);
                 break;
             case 'is.gd':
-                var LongUrl = encodeURIComponent(LongUrl);
+                LongUrl = encodeURIComponent(LongUrl);
                 Utils.Short.Threely(LongUrl, tid, tm, 'isgd', cb);
                 break;
             case 'tr.im':
-                var LongUrl = encodeURIComponent(LongUrl);
+                LongUrl = encodeURIComponent(LongUrl);
                 Utils.Short.Threely(LongUrl, tid, tm, 'trim', cb);
                 break;
+            case 'urli':
+                //LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.Threely(LongUrl, tid, tm, 'urli', cb);
+                break;
+            case 'miudin':
+                //LongUrl = encodeURIComponent(LongUrl);
+                Utils.Short.Threely(LongUrl, tid, tm, 'miudin', cb);
+                break;
             default:
-                var LongUrl = encodeURIComponent(LongUrl);
+                LongUrl = encodeURIComponent(LongUrl);
                 Utils.Short.Threely(LongUrl, tid, tm, null, cb);
         }
       },
@@ -2235,9 +2854,9 @@ var Utils = {
         var Bit = new Request(ap, 'get', 'json');
             Bit.dados = {
               longUrl: LongUrl,
-              apiKey: api.bitly_key,
-              version: '2.0.1',
-              login: 'vjnrv'
+              apiKey: config.bitly_key,
+              login: config.bitly_user,
+              version: '2.0.1'
             };
             Bit.sucesso = function(re){
                 var url = re.results[LongUrl].shortUrl;
@@ -2302,12 +2921,23 @@ var Utils = {
                 ap = api.trim;
                 d  = {url: LongUrl};
                 break;
+            case 'urli':
+               console.log('Threely > URLi');
+               ap  = api.urli;
+               d   = {format: 'simple', action: 'shorturl', url: LongUrl};
+               break;
+            case 'miudin':
+               console.log('Threely > Miud.in');
+               ap  = api.miudin;
+               //LongUrl = unescape(LongUrl);
+               d   = {url: LongUrl};
+               break;
             default:
                 console.log('Threely > 3.ly');
                 ap = api.threely;
                 d  = {api: 'em5893833', u: LongUrl};
         }
-        var Ly = new Request(ap, 'get', 'html');
+        var Ly = new Request(ap, 'get', 'text');
             Ly.dados = d;
             Ly.sucesso = function(url){
                 Utils.Short.link = url;
@@ -2326,14 +2956,15 @@ var Utils = {
                 Popup().ShortLinkOK(tid, tm, '');
             };
             Ly.init();
-        return shorted;
       },
 
     },
 
     Yfrog:{
-        thumb:function(url){
-            return url+'.th.jpg';
+        vendo:null,
+        thumb:function(id){
+            Utils.Yfrog.vendo = id;
+            return 'http://yfrog.com/'+id+'.th.jpg';
         }
     },
 
@@ -2343,6 +2974,24 @@ var Utils = {
             Utils.Twitpic.vendo = id;
             var size = 'thumb';
             return api.twitpic+size+'/'+id;
+        }
+    },
+
+    Twitgoo:{
+        vendo:null,
+        thumb:function(id){
+            var pic = new Request(api.twitgoo+id, 'get', 'xml');
+                pic.sucesso = function(e){
+                    Utils.Twitgoo.vendo = id;
+                    var url = $('rsp > thumburl', $(e)).text();
+                    try{
+                      Popup().Twitgoo(id, url);
+                    }catch(e){}
+                }
+                pic.erro = function(e){
+                    console.log(e);
+                }
+                pic.init();
         }
     },
 
@@ -2364,11 +3013,8 @@ var Utils = {
 
 };
 
-
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
   if(request.novos_tweets) {
-    var alerta = new Audio('http://vjnrv.net/Labs/Chrowety/Res/alerta.wav');
-        alerta.play();
     sendResponse({
       'tweets': fec.last(request.tm, request.total, request.max)
     });
@@ -2379,31 +3025,52 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
     chrome.tabs.remove(OAuth.tab);
     OAuth.Access();
   }
-});
 
-function Alerts(tm, n){
-  if(config.alerts == "true"){
-    try{
-      chrome.tabs.executeScript(null, {
-             file: 'js/jquery.js'
-            }, function() {
-                chrome.tabs.insertCSS(null, {
-                       file: 'css/base_pagina.css'
-                      }, function() {
-                          chrome.tabs.executeScript(null, {code:
-                            'var _NAME_ = "'+tm+'"; var _TOTAL_ = "'+n+'";var _MAX_ = "'+config.alerts_max+'"; var _Alerts_ = "'+Traduz('alerts')+'";'
-                          });
-                          chrome.tabs.executeScript(null, {
-                                 file: 'js/script.js'
-                          });//tabs
-                      }
-                );//tabs
-            }
-      );//tabs
-    }catch(e){console.log(e)}
+  if(request.traduz){
+    var re;
+      if(typeof(request.texto) == 'object'){
+        re = [];
+        for(i in request.texto){
+            re[i] = Traduz(request.texto[i]);
+        }
+      }else{
+        re = Traduz(request.texto);
+      }
+      sendResponse({
+        'traduzido': re,
+        'logado': db.pega('logado')
+      });
   }
-}
 
+  if(request.shareVideo){
+    console.log('Sharing Video...');
+    var titulo = request.videoTitle;
+    var id     = request.videoID;
+    var URL    = ': http://youtu.be/'+id;
+    var txt;
+
+    if(140 < titulo.length +URL.length){
+        var tirar = 140 -URL.length -3; // 140 -url -3 (dots)
+        txt = [];
+        for (var i = 0; i < tirar; i++){
+            txt[i] = titulo.charAt(i);
+        }
+        txt[i] = '...';
+        txt = txt.join('') +URL;
+    }
+    else {
+        txt = titulo +URL;
+    }
+
+    //console.log('Texto: '+txt);
+    Chrowety.update(txt, null, 'home', function(OK){
+        sendResponse({
+          'enviou': OK
+        });
+    });
+  }
+
+});
 
 function Logout(){
     Chrowety.logout();
@@ -2432,17 +3099,13 @@ function Login(user,senha,lembra){
 }
 
 function BrowserAction(){
-  var canvas = document.getElementById('canvas');
-  canvasContext = canvas.getContext('2d');
   chrome.browserAction.setBadgeBackgroundColor({color:[119, 190, 190, 190]});
-  chrome.browserAction.setTitle({title:"Chrowety"});
 }
 
 function init() {
   BrowserAction();
   LoadConfig();
-  document.charset = language.charset;
-  $('meta')[0].charset = language.charset;
+  Utils.Sistema.load();
   if(db.pega('logado')){
     if(db.pega('AuthMode') == 'OAuth'){
         OAuth.LoadToken();
@@ -2458,7 +3121,4 @@ function init() {
 $(document).ready(init);
 </script>
 </head>
-<body>
-<canvas id="canvas" width="27" height="23"></canvas>
-</body>
 </html>

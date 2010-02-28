@@ -43,12 +43,4 @@ chrome.extension.sendRequest({'novos_tweets': true, 'tm': _time, 'total': _total
     }
     $('.Chrowety .rt').css({'background-image': 'url('+chrome.extension.getURL('img/sprite-icons.png')+')'});
     $('.Chrowety .rts').css({'background-image': 'url('+chrome.extension.getURL('img/sprite-icons.png')+')'});
-    /*
-    $('.Chrowety .twet, .Chrowety .reply').css({'background': '#ffffff url(chrome-extension://'+exID+'/img/w.jpg) no-repeat left bottom'});
-    $('.Chrowety .r').css({'background': 'transparent url('+chrome.extension.getURL('img/r.png')+') no-repeat'});
-    $('.Chrowety .cadeado').css({'background-image': 'url('+chrome.extension.getURL('img/sprite-icons.png')+')'});
-    $('.Chrowety .lixo').css({'background-image': 'url('+chrome.extension.getURL('img/sprite-icons.png')+')'});
-    $('.Chrowety .star').css({'background-image': 'url('+chrome.extension.getURL('img/sprite-icons.png')+')'});
-    */
-
 });

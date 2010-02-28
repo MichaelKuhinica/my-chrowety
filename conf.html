@@ -4,12 +4,25 @@
 <title></title>
 <link type="text/css" rel="stylesheet" href="css/base.css" />
 <link type="text/css" rel="stylesheet" href="css/config.css" />
+<link rel="icon" type="image/png" href="icones/x16.png">
 <script type="text/javascript" src="js/db.js"></script>
-<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/jquery-1.4.min.js"></script>
 <script type="text/javascript">
 /*<![CDATA[*/
-var config = {};
-var Controller = function(){return chrome.extension.getBackgroundPage()};
+var config = {},config_temp = {},DesktopNotifications;
+var Controller = function(){
+    if(chrome.extension.getBackgroundPage()){
+        return chrome.extension.getBackgroundPage();
+    }else{
+        var v = chrome.extension.getViews(),p;
+        for(var i in v){
+            if(v[i] && v[i].fec){
+                p = v[i];
+            }
+        }
+        return p;
+    }
+};
 function Traduz(s, e){
   return Controller().Traduz(s, e);
 }
@@ -21,6 +34,10 @@ function J2S(obj){
 }
 function S2J(str){
     return JSON.parse(str);
+}
+
+function SO(){
+    return Controller().Utils.Sistema.so;
 }
 
 function Toggle(el, noSlide){
@@ -40,6 +57,46 @@ function Toggle(el, noSlide){
   }
 }
 
+function CheckNotify(){
+    var DN = webkitNotifications.checkPermission();
+    var ativo = DesktopNotifications;
+    if(ativo == 'false' || DN != 0){
+        $('#ativar_desktop_notify').show();
+        $('#desativar_desktop_notify').hide();
+    }else{
+        $('#ativar_desktop_notify').hide();
+        $('#desativar_desktop_notify').show();
+    }
+}
+
+function DesativaNotify(){
+    DesktopNotifications = 'false';
+    //CheckNotify();
+    SaveConfig();
+}
+
+function AtivaNotify(){
+    if(webkitNotifications.checkPermission() == 0){
+        DesktopNotifications = 'true';
+        SaveConfig();
+    }else{
+        webkitNotifications.requestPermission(function(){
+            switch(webkitNotifications.checkPermission()){
+                case 0:
+                    DesktopNotifications = 'true';
+                    break;
+                case 1:
+                    DesktopNotifications = 'false';
+                    break;
+                case 2:
+                    DesktopNotifications = 'false';
+                    break;
+            }
+            SaveConfig();
+        });
+    }
+}
+
 function ChangeIcon(to){
 	var ico;
 	if(to == 'chrome'){
@@ -56,6 +113,16 @@ function ChangeIcon(to){
 	chrome.browserAction.setIcon({path:pat});
     config = J2S(Controller().config);
     db.salva('config', config);		
+}
+
+function BitLyAPI(){
+    var val = $('#url_shortener').val();
+    if(val == "bit.ly" || val == "j.mp"){
+        $('#personal_bitly_api').fadeIn();
+    }
+    else{
+        $('#personal_bitly_api').fadeOut();
+    }
 }
 
 function getByValue(selectId, value){
@@ -77,19 +144,70 @@ function GetValue(selectId){
 
 function Reset(){
     db.deleta('config');
-    Controller().language[Controller().language.id]['slogan_bak'] = Controller().language[Controller().language.id]['slogan'];
-    Controller().LoadConfig();
+    Controller().ReLoadConfig();
     location.reload();
 }
 
 function ResetSlogan(){
     config.twitter_question = Controller().language[Controller().language.id]['slogan_bak'];
     $('#twitter_question').val(config.twitter_question);
+    $('#twitter_question').focus();
 }
 function ResetBaseAPI(){
     config.base_api = Controller().DefaultConfig.base_api;
     $('#base_api').val(config.base_api);
+    $('#base_api').focus();
 }
+
+var bitly_api_login = Controller().DefaultConfig.bitly_user;
+var bitly_api_key   = Controller().DefaultConfig.bitly_key;
+
+var LocationPopup;
+
+function SalvaLocation(){
+    config_temp.Geo = {
+      enabled: "true",
+      Location: [],
+      Address: null
+    };
+    var Pos_ = LocationPopup.Icone.getPosition();
+    config_temp.Geo.Location[0] = Pos_.Va ? Pos_.Va : Pos_.a;
+    config_temp.Geo.Location[1] = Pos_.Wa ? Pos_.Wa : Pos_.b;
+    config_temp.Geo.Address     = LocationPopup.document.getElementById('endereco').innerText;
+    LocationPopup.close();
+    SaveConfig(true);
+}
+
+function OpenLocation(){
+    var PUP = 'location.html';
+    var PNM = 'Chrowety Geo Location';
+    var WCF = 'location=0,resizable=0,width=400,height=400';
+    LocationPopup = window.open(PUP,PNM,WCF);
+}
+
+function EnableLocation(){
+    config_temp.Geo = {
+      enabled: "true",
+      Location: config.Geo.Location,
+      Address: config.Geo.Address
+    };
+    SaveConfig(true);
+}
+
+function DisableLocation(){
+    config_temp.Geo = {
+      enabled: "false",
+      Location: config.Geo.Location,
+      Address: config.Geo.Address
+    };
+    SaveConfig(true);
+}
+
+function _GetLocation(callback, failback){
+    var geo = google.gears.factory.create('beta.geolocation');
+    geo.getCurrentPosition(callback, failback);
+}
+
 function LoadConfig(){
     if(!db.pega('config')){
         config = Controller().DefaultConfig;
@@ -97,14 +215,53 @@ function LoadConfig(){
         config = S2J(db.pega('config'));
     }
 
-    if(config.twitter_question){
-      Controller().language[Controller().language.id]['slogan_bak'] = Controller().language[Controller().language.id]['slogan'];
-      Controller().language[Controller().language.id]['slogan'] = config.twitter_question;
+    if(config.Geo.Address){
+        if(config.Geo.enabled == 'true'){
+            $('#geo_location_address').text(Traduz('activated'));
+            $('#geo_location_disable').show();
+        }else{
+            $('#geo_location_address').text(Traduz('disabled'));
+            $('#geo_location_enable').show();
+        }
+        $('#geo_location_address').attr('title', config.Geo.Address);
+
+        $('#geo_location_address').show();
+        $('#geo_location_edit').show();
     }else{
-      config.twitter_question = Controller().language[Controller().language.id].slogan;
+        /*
+        _GetLocation(function(pos){
+                console.log(pos);
+                config.Geo = {
+                    enabled: "false",
+                    Location: [pos.latitude, pos.longitude],
+                    Address: null
+                };
+                console.log('New Location: ');
+                console.log([pos.latitude, pos.longitude]);
+            }, function(erro){
+                config.Geo = {
+                    enabled: "false",
+                    Location: [],
+                    Address: null
+                };
+            });
+        */
+        $('#geo_location_add').show();
     }
 
-    SelectOption('language', config.language);
+    if(bitly_api_login == config.bitly_user){
+        $('#bitly_api_login').val('');
+    }else{
+        $('#bitly_api_login').val(config.bitly_user);
+    }
+
+    if(bitly_api_key == config.bitly_key){
+        $('#bitly_api_key').val('');
+    }else{
+        $('#bitly_api_key').val(config.bitly_key);
+    }
+
+    //SelectOption('language', config.language);
     SelectOption('translate_tweets_to', config.translate_tweets_to);
     SelectOption('url_shortener', config.url_shortener);
     SelectOption('alerts', config.alerts);
@@ -120,15 +277,25 @@ function LoadConfig(){
     SelectOption('mentions_refresh_time', config.refresh.mentions);
     SelectOption('messages_tweets_page', config.start_count.messages);
     SelectOption('messages_refresh_time', config.refresh.messages);
+    SelectOption('desktop_notifications_timeout', config.desktop_notifications_timeout);
+    SelectOption('audio_alerta', config.audio_alerta);
+
+    DesktopNotifications = config.desktop_notifications;
 
     $('#twitter_question').val(config.twitter_question);
     $('#base_api').val(config.base_api);
+
+    CheckNotify();
+    BitLyAPI();
 }
 
-function SaveConfig(){
+function SaveConfig(geo){
 	config = db.pega('config') ? S2J(db.pega('config')) : Controller().DefaultConfig;
-	
-    config.language             = GetValue('language');
+
+    config.desktop_notifications = DesktopNotifications;
+    config.desktop_notifications_timeout = GetValue('desktop_notifications_timeout');
+    //config.language             = GetValue('language');
+    config.audio_alerta         = GetValue('audio_alerta');
     config.translate_tweets_to  = GetValue('translate_tweets_to');
     config.url_shortener        = GetValue('url_shortener');
     config.alerts               = GetValue('alerts');
@@ -145,7 +312,22 @@ function SaveConfig(){
     config.start_count.messages = GetValue('messages_tweets_page');
     config.refresh.messages     = GetValue('messages_refresh_time');
 
-    config.twitter_question     = $('#twitter_question').val();
+    if(geo){
+        config.Geo = config_temp.Geo;
+    }
+
+    if(bitly_api_login == $('#bitly_api_login').val()){
+        config.bitly_user = bitly_api_login;
+    }else{
+        config.bitly_user = $('#bitly_api_login').val();
+    }
+
+    if(bitly_api_key == $('#bitly_api_key').val()){
+        config.bitly_key = bitly_api_key;
+    }else{
+        config.bitly_key = $('#bitly_api_key').val();
+    }
+
     config.base_api     		= $('#base_api').val();
 
     db.salva('config', J2S(config));
@@ -155,7 +337,6 @@ function SaveConfig(){
 function init(){
     document.title = Traduz('configuration')+' - Chrowety';
     LoadConfig();
-    document.charset = Controller().language.charset;
     if(db.pega('conf_guia')){
         try{
             Toggle($('#'+db.pega('conf_guia')), true);
@@ -171,6 +352,7 @@ $(document).ready(init);
 </script>
 </head>
 <body>
+<a onclick="SaveConfig()"><script>html(Traduz('save'))</script></a>
 <div id="init" class="config">
     <div class="tit p16 oceania">
       <span class="titulo fl p16 oceania">
@@ -244,7 +426,7 @@ $(document).ready(init);
                 <option value="30">30</option>
               </select>
             </label>
-			<span class="button_margin"></span>        
+			<span class="button_margin"></span>
             <label><script>html(Traduz('refresh_time'))</script>
               <select id="messages_refresh_time">
                 <option value="5">5 <script>html(Traduz('minutes'))</script></option>
@@ -258,64 +440,61 @@ $(document).ready(init);
             </label>
             <br /><br />
             <label><script>html(Traduz('url_shortener'))</script>
-              <select id="url_shortener">
+              <select id="url_shortener" onchange="BitLyAPI()">
+                <option value="goo.gl">goo.gl</option>
                 <option value="3.ly">3.ly</option>
                 <option value="migre.me">migre.me</option>
-                <option value="goo.gl">goo.gl</option>
+                <option value="miudin">miud.in</option>
                 <option value="bit.ly">bit.ly</option>
                 <option value="j.mp">j.mp</option>
                 <option value="is.gd">is.gd</option>
+                <option value="urli">URLi</option>
               </select>
             </label>
             <br /><br />
-            <label><script>html(Traduz('alerts'))</script>
-              <select id="alerts">
-                <option value="true"><script>html(Traduz('yes'))</script></option>
-                <option value="false"><script>html(Traduz('no'))</script></option>
-              </select>
-            </label>
-            <br /><br />
-            <label><script>html(Traduz('max_tweets_per_alerts'))</script>
-              <select id="alerts_max">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-              </select>
-            </label>
 
-            <br /><br />
+            <span id="personal_bitly_api" class="dn">
+                <label><script>html(Traduz('bitly_api_login'))</script>
+                  <input id="bitly_api_login" type="text" value="" size="7" />
+                </label> <a class="p8" onclick="$('#bitly_api_login').val('')"><script>html(Traduz('reset2'))</script></a>
+                <br /><br />
+
+                <label><script>html(Traduz('bitly_api_key'))</script>
+                  <input id="bitly_api_key" type="text" value="" size="35" />
+                </label> <a class="p8" onclick="$('#bitly_api_key').val('')"><script>html(Traduz('reset2'))</script></a>
+                <br /><br />
+            </span>
+
             <label><script>html(Traduz('open_links_in_background'))</script>
               <select id="link_in_bg">
                 <option value="true"><script>html(Traduz('yes'))</script></option>
                 <option value="false"><script>html(Traduz('no'))</script></option>
               </select>
-            </label>    
+            </label>
             <br /><br />
+
+            <label><script>html(Traduz('geotagged_tweets'))</script>*
+                <span>
+                    <i id="geo_location_address" class="dn"></i>
+                    <a id="geo_location_add" onclick="OpenLocation()" class="dn"><script>html(Traduz('add_your_location'))</script></a>
+                    <a id="geo_location_edit" onclick="OpenLocation()" class="dn">(<script>html(Traduz('edit'))</script>)</a>
+                    <a id="geo_location_enable" onclick="EnableLocation()" class="dn">(<script>html(Traduz('activate'))</script>)</a>
+                    <a id="geo_location_disable" onclick="DisableLocation()" class="dn">(<script>html(Traduz('disable'))</script>)</a>
+                </span>
+            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+            <br /><br />
+            <span>* <script>html(Traduz('need_enable_geotagging_on_twitter'))</script></span>
             </div>
         </fieldset>
 
         <fieldset class="section" active="false" id="interface">
             <legend class="oceania" onclick="Toggle(this.parentNode);"><script>html(Traduz('interface'))</script></legend>
             <div class="dn">
+
             <label><script>html(Traduz('language'))</script>
-              <select id="language">
-                <option value="en">English</option>
-                <option value="pt-br">Portugu&ecirc;s (Brasil)</option>
-                <option value="es">Espa&ntilde;ol</option>
-                <option value="de">German</option>
-                <option value="nl">Dutch</option>
-				<option value="cz">Czech</option>
-				<option value="ru">Russian</option>
-              </select>
+                <span><script>html(Traduz('langName'))</script> (<script>html(Traduz('_langName'))</script>)</span>
             </label>
-            <br /><br />
+            <span class="button_margin"></span>
             <label><script>html(Traduz('translate_tweets_to'))</script>
               <select id="translate_tweets_to">
                 <option value="af">Afrikaans</option>
@@ -387,15 +566,15 @@ $(document).ready(init);
                 <option value="750px">750px</option>
               	-->
 			  </select>
-            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+            </label>
 			<br /><br />
             <label><script>html(Traduz('show_username_in_tweets'))</script>
               <select id="show_username">
                 <option value="true"><script>html(Traduz('yes'))</script></option>
                 <option value="false"><script>html(Traduz('no'))</script></option>
               </select>
-            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
-			
+            </label>
+
             <br /><br />			
             <label><script>html(Traduz('tweet_font_size'))</script>
               <select id="tweet_font_size">
@@ -423,20 +602,81 @@ $(document).ready(init);
                 <option value="false"><script>html(Traduz('no'))</script></option>
               </select>
             </label>
-
+<!--
             <br /><br />
             <label><script>html(Traduz('twitter_question'))</script>
               <input id="twitter_question" type="text" value="" size="24" />
             </label> <a title="" class="p8" onclick="ResetSlogan()"><script>html(Traduz('reset2'))</script></a>
-			
+-->
             <br /><br />
 			<label style="vertical-align:middle"><script>html(Traduz('icon'))</script>
 			 	<img onclick="ChangeIcon('chrome2');" src="icones/x19_chrome2.png" style="margin-top:-2px;" class="fr pointer">
 			 	<img onclick="ChangeIcon('chrome');" src="icones/x19_chrome.png" style="margin-top:-2px;" class="fr pointer">
              	<img onclick="ChangeIcon('normal');" src="icones/x19.png" style="margin-top:-2px;" class="fr pointer">
 				<br>
-            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+            </label>
            </div>
+        </fieldset>
+
+        <fieldset class="section" active="false" id="alertsMan">
+            <legend class="oceania" onclick="Toggle(this.parentNode);"><script>html(Traduz('alerts'))</script></legend>
+            <div class="dn">
+            <label><script>html(Traduz('desktop_alerts'))</script>
+                <span>
+                    <b id="desativar_desktop_notify" class="dn verde"> <script>html(Traduz('activated'))</script>
+                        <a onclick="DesativaNotify()">(<script>html(Traduz('disable'))</script>)</a>
+                    </b>
+                    <b id="ativar_desktop_notify" class="dn"> <script>html(Traduz('disabled'))</script>
+                        <a onclick="AtivaNotify()">(<script>html(Traduz('activate'))</script>)</a>
+                    </b>
+                    <b id="desktop_sem_suporte" class="dn">Windows</b>
+                </span>
+            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+            <br /><br />
+            <label><script>html(Traduz('desktop_alert_timeout'))</script>
+              <select id="desktop_notifications_timeout">
+                <option value="5">5 <script>html(Traduz('seconds'))</script></option>
+                <option value="10">10 <script>html(Traduz('seconds'))</script></option>
+                <option value="15">15 <script>html(Traduz('seconds'))</script></option>
+                <option value="20">20 <script>html(Traduz('seconds'))</script></option>
+                <option value="25">25 <script>html(Traduz('seconds'))</script></option>
+                <option value="30">30 <script>html(Traduz('seconds'))</script></option>
+                <option value="35">35 <script>html(Traduz('seconds'))</script></option>
+                <option value="40">40 <script>html(Traduz('seconds'))</script></option>
+                <option value="50">50 <script>html(Traduz('seconds'))</script></option>
+              </select>
+            </label>
+            <br /><br />
+            <label><script>html(Traduz('alert_sound'))</script>
+              <select id="audio_alerta">
+                <option value="true"><script>html(Traduz('yes'))</script></option>
+                <option value="false"><script>html(Traduz('no'))</script></option>
+              </select>
+            </label> <span class="vermelho">(<script>html(Traduz('new'))</script>)</span>
+            <br /><br />
+            <label><script>html(Traduz('max_tweets_per_alerts'))</script>
+              <select id="alerts_max">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
+            </label>
+            <br /><br /><hr /><br />
+            <label><script>html(Traduz('alerts'))</script>
+              <select id="alerts">
+                <option value="true"><script>html(Traduz('yes'))</script></option>
+                <option value="false"><script>html(Traduz('no'))</script></option>
+              </select>
+            </label>
+            <br /><br />
+            </div>
         </fieldset>
 
         <fieldset class="section" active="false" id="other">
@@ -448,7 +688,7 @@ $(document).ready(init);
             <br /><br />
             <p><script>html(Traduz('base_api_effect'))</script></p>
             <br />
-            <label><script>html(Traduz('remaining_requests'))</script>  <span id="api_limit"><script>html(db.pega('api_limit'))</script>/150</span></label>
+            <label><script>html(Traduz('remaining_api_requests'))</script>  <span id="api_limit"><script>html((db.pega('api_limit') ? db.pega('api_limit') : '150'))</script>/150</span></label>
             <br /><br />
             <p><script>html(Traduz('twitter_limits_api'))</script></p>
             <br />
@@ -459,7 +699,7 @@ $(document).ready(init);
               </span>
             </label>
             <br /><br />
-            <label><script>html(Traduz('reset_time'))</script>  <span id="api_time"><script>html(Controller().ApiDate(db.pega('api_reset_time')))</script></span></label>
+            <label><script>html(Traduz('resets_on'))</script>  <span id="api_time"><script>html(Controller().ApiDate(db.pega('api_reset_time')))</script></span></label>
             <br /><br />
             <span class="p8">*<script>html(Traduz('how_to_restart'))</script></span>
             </div>

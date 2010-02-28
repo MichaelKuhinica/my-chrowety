@@ -1,0 +1,28 @@
+#chrowety-box {
+	padding: 0 5px;
+}
+#chrowety-map {
+	border-top: 1px solid #ccc;
+	padding: 6px 6px 6px 44px;
+	cursor: pointer;
+	position: relative;
+}
+#chrowety-img {
+	position: absolute;
+	left: 6px;
+}
+#chrowety-msg {
+	min-height: 32px;
+	line-height: 32px;
+    vertical-align:middle;
+	font-size: 12px;
+	font-weight: bold;
+	color: #666;
+}
+#chrowety-box:hover #chrowety-msg{
+    text-shadow: red 1px 1px 30px;
+}
+#chrowety-box .green{color:green}
+#chrowety-box .red{color:red}
+#chrowety-box:hover .green{text-shadow: green 1px 1px 30px}
+#chrowety-box:hover .red{text-shadow: red 1px 1px 30px}

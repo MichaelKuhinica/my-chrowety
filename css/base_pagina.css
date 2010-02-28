@@ -3,19 +3,10 @@
   top:5px;
   right:5px;
   z-index:10000001;
-  /*height:150px;*/
   width:375px;
   padding:5px;
   overflow:hidden;
-/*
-  border:1px solid #aaa;
-  border-radius:10px;
-  background-color:#ffffff;
-  -webkit-box-shadow: 0px 0px 9px #aaa;
-*/
 }
-
-
 .Chrowety *{
   font-family: Calibri, Arial, Helvetica, sans-serif;
   font-size: 10pt;
@@ -159,19 +150,17 @@
 }
 .Chrowety .twet,
 .Chrowety .reply{
-  background:#ffffff url('../img/w.jpg') no-repeat left bottom;
+  background-color:#ffffff;
   -webkit-box-shadow: 0px 0px 9px #aaa;
   border-radius:10px;
   padding:15px 10px 0 10px;
   -webkit-transition: opacity 350ms linear;
-  /*-webkit-box-shadow: 0px 0px 15px #777;*/
 }
 .Chrowety .read{
   border-left:2px solid transparent;
 }
 .Chrowety .unread{
   border-left:2px solid -webkit-gradient(linear, 0% 0%, 0% 100%, from(#ddd), to(#fff));
-  /*background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fcfcfc), to(#fff));*/
 }
 .Chrowety .read:hover{
   border-left:2px solid #eee;
@@ -248,7 +237,6 @@
   color: #000000
 }
 .Chrowety .r{
-  background:transparent url('../img/r.png') no-repeat;
   opacity: 0;
   -webkit-transition: opacity 350ms linear;
   width:300px;

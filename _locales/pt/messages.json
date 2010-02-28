@@ -1,0 +1,599 @@
+{
+  "author": {
+    "message": "vjnrv"
+  },
+
+  "_langName": {
+    "message": "Portuguese"
+  },
+
+  "langName": {
+    "message": "Português"
+  },
+
+  "description": {
+    "message": "Um cliente do Twitter para o Google Chrome"
+  },
+
+  "slogan": {
+    "message": "O que está acontecendo?"
+  },
+
+  "home": {
+    "message": "Início"
+  },
+
+  "mentions": {
+    "message": "Menções"
+  },
+
+  "messages": {
+    "message": "Mensagens"
+  },
+
+  "favorites": {
+    "message": "Favoritos"
+  },
+
+  "just_now": {
+    "message": "Agora"
+  },
+
+  "less_than_a_minute_ago": {
+    "message": "Menos de 1 minuto atrás"
+  },
+
+  "a_minute_ago": {
+    "message": "1 minuto atrás"
+  },
+
+  "minutes_ago": {
+    "message": "$n$ minutos atrás",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_hour_ago": {
+    "message": "1 hora atrás"
+  },
+
+  "hours_ago": {
+    "message": "$n$ horas atrás",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_day_ago": {
+    "message": "1 dia atrás"
+  },
+
+  "days_ago": {
+    "message": "$n$ dias atrás",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_month_ago": {
+    "message": "1 mês atrás"
+  },
+
+  "months_ago": {
+    "message": "$n$ meses atrás",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "years_ago": {
+    "message": "Anos atrás"
+  },
+
+  "following": {
+    "message": "Seguindo"
+  },
+
+  "followers": {
+    "message": "Seguidores"
+  },
+
+  "username": {
+    "message": "Usuário"
+  },
+
+  "password": {
+    "message": "Senha"
+  },
+
+  "remember": {
+    "message": "Lembrar"
+  },
+
+  "login": {
+    "message": "Entrar"
+  },
+
+  "logout": {
+    "message": "Sair"
+  },
+
+  "retweet": {
+    "message": "Retwittar"
+  },
+
+  "retweeted_by": {
+    "message": "Retwittado por"
+  },
+
+  "retweet_now": {
+    "message": "Retwittar agora"
+  },
+
+  "edit": {
+    "message": "Editar"
+  },
+
+  "reply": {
+    "message": "Responder"
+  },
+
+  "in_reply_to": {
+    "message": "em resposta a"
+  },
+
+  "update": {
+    "message": "Atualizar"
+  },
+
+  "delete": {
+    "message": "Deletar"
+  },
+
+  "cancel": {
+    "message": "Cancelar"
+  },
+
+  "ok": {
+    "message": "OK"
+  },
+
+  "done": {
+    "message": "Pronto"
+  },
+
+  "favorite": {
+    "message": "+ Favorito"
+  },
+
+  "unfavorite": {
+    "message": "- Favorito"
+  },
+
+  "show_more": {
+    "message": "Mostrar mais"
+  },
+
+  "no_more_tweets": {
+    "message": "Sem mais tweets"
+  },
+
+  "new_tweet": {
+    "message": "Novo tweet"
+  },
+
+  "new_tweets": {
+    "message": "Novos tweets"
+  },
+
+  "logging_in": {
+    "message": "Entrando"
+  },
+
+  "sucessfully_logged": {
+    "message": "Logado com sucesso"
+  },
+
+  "tweets": {
+    "message": "Tweets"
+  },
+
+  "last_update": {
+    "message": "Ultima atualização"
+  },
+
+  "member_since": {
+    "message": "Membro desde"
+  },
+
+  "watch_on_youtube": {
+    "message": "Assista no Youtube"
+  },
+
+  "configuration": {
+    "message": "Configuração"
+  },
+
+  "minute": {
+    "message": "Minuto"
+  },
+
+  "minutes": {
+    "message": "Minutos"
+  },
+
+  "tweets_per_page": {
+    "message": "Tweets por página"
+  },
+
+  "refresh_time": {
+    "message": "Atualizar a cada"
+  },
+
+  "language": {
+    "message": "Idioma"
+  },
+
+  "remaining_api_requests": {
+    "message": "Requisições Restantes da API"
+  },
+
+  "resets_on": {
+    "message": "Reinicia em"
+  },
+
+  "restart_required": {
+    "message": "Precisa Reiniciar"
+  },
+
+  "main": {
+    "message": "Principal"
+  },
+
+  "other": {
+    "message": "Outros"
+  },
+
+  "save": {
+    "message": "Salvar"
+  },
+
+  "reset": {
+    "message": "Restaurar configuração"
+  },
+
+  "twitter_limits_api": {
+    "message": "O Twitter limita em 150 Requisições na API por hora."
+  },
+
+  "how_to_restart": {
+    "message": "Para reiniciar, vá na página de extenções, Desabilite e Habilite o Chrowety."
+  },
+
+  "sending": {
+    "message": "Enviando"
+  },
+
+  "shorting_url": {
+    "message": "Encurtando URL"
+  },
+
+  "password_empty": {
+    "message": "Senha em branco"
+  },
+
+  "user_empty": {
+    "message": "Usuário em branco"
+  },
+
+  "wait": {
+    "message": "Espere"
+  },
+
+  "retweeting": {
+    "message": "Retwittando"
+  },
+
+  "loading": {
+    "message": "Carregando"
+  },
+
+  "api_excedeed": {
+    "message": "Limite da API Excedido"
+  },
+
+  "requests_per_hour": {
+    "message": "Requisições da API por hora"
+  },
+
+  "url_shortener": {
+    "message": "Encurtador de URL"
+  },
+
+  "yes": {
+    "message": "Sim"
+  },
+
+  "no": {
+    "message": "Não"
+  },
+
+  "login_failed": {
+    "message": "Login falhou"
+  },
+
+  "interface": {
+    "message": "Interface"
+  },
+
+  "reset2": {
+    "message": "Restaurar"
+  },
+
+  "share_this_page": {
+    "message": "Compartilhar página"
+  },
+
+  "following_you": {
+    "message": "Seguindo você"
+  },
+
+  "followed": {
+    "message": "Seguido"
+  },
+
+  "alerts": {
+    "message": "Alertas"
+  },
+
+  "max_tweets_per_alerts": {
+    "message": "Tweets por Alerta"
+  },
+
+  "to": {
+    "message": "Para"
+  },
+
+  "forbidden": {
+    "message": "Proibido"
+  },
+
+  "error": {
+    "message": "Erro"
+  },
+
+  "twitter_question": {
+    "message": "Slogan do Twitter"
+  },
+
+  "text_shadow": {
+    "message": "Sombra no texto"
+  },
+
+  "tweet_font_size": {
+    "message": "Tamanho da fonte do Tweet"
+  },
+
+  "open_links_in_background": {
+    "message": "Abrir os links em segundo plano"
+  },
+
+  "or": {
+    "message": "Ou"
+  },
+
+  "sign_in_with_twitter": {
+    "message": "Entrar com Twitter"
+  },
+
+  "request_new_auth": {
+    "message": "Requisitar nova Autenticação"
+  },
+
+  "translate_this_tweet": {
+    "message": "Traduzir esse tweet"
+  },
+
+  "translate_tweets_to": {
+    "message": "Traduzir tweets para"
+  },
+
+  "base_api": {
+    "message": "Base da API"
+  },
+
+  "base_api_effect": {
+    "message": "A Base da API só muda se você tiver usando o Modo de Login via API"
+  },
+
+  "lists": {
+    "message": "Listas"
+  },
+
+  "add_list": {
+    "message": "Adicionar Lista"
+  },
+
+  "remove_list": {
+    "message": "Remover Lista"
+  },
+
+  "icon": {
+    "message": "Icone"
+  },
+
+  "popup_height": {
+    "message": "Altura do Popup"
+  },
+
+  "new": {
+    "message": "Novo"
+  },
+
+  "reload_lists": {
+    "message": "Atualizar Listas"
+  },
+
+  "no_lists_found": {
+    "message": "Nenhuma Lista encontrada"
+  },
+
+  "show_username_in_tweets": {
+    "message": "Mostrar username nos tweets"
+  },
+
+  "follow": {
+    "message": "Seguir"
+  },
+
+  "unfollow": {
+    "message": "Parar de Seguir"
+  },
+
+  "expand": {
+    "message": "Expandir"
+  },
+
+  "contract": {
+    "message": "Contrair"
+  },
+
+  "conversation": {
+    "message": "Conversação"
+  },
+
+  "from": {
+    "message": "via"
+  },
+
+  "seconds": {
+    "message": "Segundos"
+  },
+
+  "desktop_alerts": {
+    "message": "Alertas no Desktop"
+  },
+
+  "desktop_alert_timeout": {
+    "message": "Tempo de exibição do Alerta no Desktop"
+  },
+
+  "show": {
+    "message": "Mostrar"
+  },
+
+  "hide": {
+    "message": "Esconder"
+  },
+
+  "activate": {
+    "message": "Ativar"
+  },
+
+  "activated": {
+    "message": "Ativado"
+  },
+
+  "disable": {
+    "message": "Desativar"
+  },
+
+  "disabled": {
+    "message": "Desativado"
+  },
+
+  "share_this_video": {
+    "message": "Compartilhar este Vídeo"
+  },
+
+  "sharing": {
+    "message": "Compartilhando"
+  },
+
+  "shared": {
+    "message": "Compartilhado"
+  },
+
+  "try_again": {
+    "message": "Tente novamente"
+  },
+
+  "please_login": {
+    "message": "Por favor, entre no Chrowety"
+  },
+
+  "alert_sound": {
+    "message": "Som de Alerta"
+  },
+
+  "undo_retweet": {
+    "message": "Desfazer Retwit"
+  },
+
+  "you": {
+    "message": "Você"
+  },
+
+  "and": {
+    "message": "e"
+  },
+
+  "show_geo_location": {
+    "message": "Mostrar Localidade"
+  },
+
+  "geotagged_tweets": {
+    "message": "Tweets Geotageados"
+  },
+
+  "add_your_location": {
+    "message": "Adicionar sua localidade"
+  },
+
+  "where_are_you": {
+    "message": "Onde você está $user$ ?",
+    "placeholders": {
+      "user": {
+        "content": "$1",
+        "example": "Pedro"
+      }
+    }
+  },
+
+  "drag_into_your_location": {
+    "message": "Arraste o ícone para sua localidade"
+  },
+
+  "bitly_api_login": {
+    "message": "Bit.ly API Login"
+  },
+
+  "bitly_api_key": {
+    "message": "Bit.ly API Key"
+  },
+
+  "need_enable_geotagging_on_twitter": {
+    "message": "Necessário ativar geotagging na configuração do Twitter"
+  },
+
+  "undoing": {
+    "message": "Desfazendo..."
+  },
+
+  "special_chars": {
+    "message": "Caracteres Especiais"
+  }
+}

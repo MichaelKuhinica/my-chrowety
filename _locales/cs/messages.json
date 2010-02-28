@@ -1,0 +1,599 @@
+{
+  "author": {
+    "message": "Daniel Cermak"
+  },
+
+  "_langName": {
+    "message": "Czech"
+  },
+
+  "langName": {
+    "message": "čeština"
+  },
+
+  "description": {
+    "message": "Twitter klient pro Google Chrome"
+  },
+
+  "slogan": {
+    "message": "Vložení příspěvku?"
+  },
+
+  "home": {
+    "message": "Domù"
+  },
+
+  "mentions": {
+    "message": "Reakce"
+  },
+
+  "messages": {
+    "message": "Zprávy"
+  },
+
+  "favorites": {
+    "message": "Oblíbené"
+  },
+
+  "just_now": {
+    "message": "Nyní"
+  },
+
+  "less_than_a_minute_ago": {
+    "message": "Ménì než pøed minutou"
+  },
+
+  "a_minute_ago": {
+    "message": "1 minut"
+  },
+
+  "minutes_ago": {
+    "message": "$n$ minutami",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_hour_ago": {
+    "message": "pøed 1 hodin"
+  },
+
+  "hours_ago": {
+    "message": "pøed $n$ hodinami",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_day_ago": {
+    "message": "pøed 1 dny"
+  },
+
+  "days_ago": {
+    "message": "pøed $n$ dnyami",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_month_ago": {
+    "message": "pøed 1 mìsíci"
+  },
+
+  "months_ago": {
+    "message": "pøed $n$ mìsíciami",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "years_ago": {
+    "message": "lety"
+  },
+
+  "following": {
+    "message": "Sleduji"
+  },
+
+  "followers": {
+    "message": "Sleduje mì"
+  },
+
+  "username": {
+    "message": "Uživatel"
+  },
+
+  "password": {
+    "message": "Heslo"
+  },
+
+  "remember": {
+    "message": "Pamatovat"
+  },
+
+  "login": {
+    "message": "Pøihlásit"
+  },
+
+  "logout": {
+    "message": "Odhlásit"
+  },
+
+  "retweet": {
+    "message": "Pøedat dál"
+  },
+
+  "retweeted_by": {
+    "message": "Pøeposláno od"
+  },
+
+  "retweet_now": {
+    "message": "Odeslat nyní"
+  },
+
+  "edit": {
+    "message": "Upravit"
+  },
+
+  "reply": {
+    "message": "Reagovat"
+  },
+
+  "in_reply_to": {
+    "message": "Odpovìï na"
+  },
+
+  "update": {
+    "message": "aktualizovat"
+  },
+
+  "delete": {
+    "message": "Smazat"
+  },
+
+  "cancel": {
+    "message": "Zrušit"
+  },
+
+  "ok": {
+    "message": "OK"
+  },
+
+  "done": {
+    "message": "Odeslat"
+  },
+
+  "favorite": {
+    "message": "Pøidat mezi oblíbené"
+  },
+
+  "unfavorite": {
+    "message": "Odebrat z oblíbených"
+  },
+
+  "show_more": {
+    "message": "Zobrazit více"
+  },
+
+  "no_more_tweets": {
+    "message": "Žádné další tweety nenalezeny"
+  },
+
+  "new_tweet": {
+    "message": "Nové tweety"
+  },
+
+  "new_tweets": {
+    "message": "Nové tweety"
+  },
+
+  "logging_in": {
+    "message": "Pøihlášen"
+  },
+
+  "sucessfully_logged": {
+    "message": "Pøihlášení probìhlo úspìšnì"
+  },
+
+  "tweets": {
+    "message": "Tweety"
+  },
+
+  "last_update": {
+    "message": "Poslední aktualizace"
+  },
+
+  "member_since": {
+    "message": "Èlen od"
+  },
+
+  "watch_on_youtube": {
+    "message": "Pøehrát pøes Youtube"
+  },
+
+  "configuration": {
+    "message": "Nastavení"
+  },
+
+  "minute": {
+    "message": "Minut"
+  },
+
+  "minutes": {
+    "message": "Minuty"
+  },
+
+  "tweets_per_page": {
+    "message": "Pøíspìvky na stránce"
+  },
+
+  "refresh_time": {
+    "message": "Obnovení"
+  },
+
+  "language": {
+    "message": "Jazyk"
+  },
+
+  "remaining_api_requests": {
+    "message": "Žádosti zbývajících API"
+  },
+
+  "resets_on": {
+    "message": "Vrátit výchozí"
+  },
+
+  "restart_required": {
+    "message": "Povinný restart"
+  },
+
+  "main": {
+    "message": "Hlavní"
+  },
+
+  "other": {
+    "message": "Ostatní"
+  },
+
+  "save": {
+    "message": "Uložit"
+  },
+
+  "reset": {
+    "message": "Vrátit výchozí nastavení"
+  },
+
+  "twitter_limits_api": {
+    "message": "Twitter limity 150 Žádosti o API za hodinu"
+  },
+
+  "how_to_restart": {
+    "message": "Chcete-li restartovat, pøejdìte na stránku rozšíøení, vypnout a zapnout Chrowety"
+  },
+
+  "sending": {
+    "message": "Odeslat"
+  },
+
+  "shorting_url": {
+    "message": "Zkrátit URL"
+  },
+
+  "password_empty": {
+    "message": "Heslo je prázdné"
+  },
+
+  "user_empty": {
+    "message": "Uživatel je prázdný"
+  },
+
+  "wait": {
+    "message": "Èekejte"
+  },
+
+  "retweeting": {
+    "message": "Pøeposílání"
+  },
+
+  "loading": {
+    "message": "Naèítání"
+  },
+
+  "api_excedeed": {
+    "message": "API limit vyèerpán"
+  },
+
+  "requests_per_hour": {
+    "message": "API žádosti za hodinu"
+  },
+
+  "url_shortener": {
+    "message": "URL zkracování"
+  },
+
+  "yes": {
+    "message": "Ano"
+  },
+
+  "no": {
+    "message": "Ne"
+  },
+
+  "login_failed": {
+    "message": "Pøihlášení se nezdaøilo"
+  },
+
+  "interface": {
+    "message": "Rozhraní"
+  },
+
+  "reset2": {
+    "message": "Vrátit na výchozí"
+  },
+
+  "share_this_page": {
+    "message": "Sdílet tuto stránku"
+  },
+
+  "following_you": {
+    "message": "Sleduje vás"
+  },
+
+  "followed": {
+    "message": "Followed"
+  },
+
+  "alerts": {
+    "message": "Upozornìní"
+  },
+
+  "max_tweets_per_alerts": {
+    "message": "Upozornìní na nové tweety"
+  },
+
+  "to": {
+    "message": "Do"
+  },
+
+  "forbidden": {
+    "message": "Chyba"
+  },
+
+  "error": {
+    "message": "Chyba"
+  },
+
+  "twitter_question": {
+    "message": "Twitter otázka"
+  },
+
+  "text_shadow": {
+    "message": "Stínovat text"
+  },
+
+  "tweet_font_size": {
+    "message": "Velikost písma tweetù"
+  },
+
+  "open_links_in_background": {
+    "message": "Otevírar odkazy na pozadí"
+  },
+
+  "or": {
+    "message": "Nebo"
+  },
+
+  "sign_in_with_twitter": {
+    "message": "Pøihlásit pøes Twitter"
+  },
+
+  "request_new_auth": {
+    "message": "Žádost o novou autorizaci"
+  },
+
+  "translate_this_tweet": {
+    "message": "Pøeložit tento tweet"
+  },
+
+  "translate_tweets_to": {
+    "message": "Pøekládat tweety do"
+  },
+
+  "base_api": {
+    "message": "API stránka"
+  },
+
+  "base_api_effect": {
+    "message": "API stránka platí pouze, používáte-li API pøihlášení"
+  },
+
+  "lists": {
+    "message": "Seznamy"
+  },
+
+  "add_list": {
+    "message": "Pøidat seznam"
+  },
+
+  "remove_list": {
+    "message": "Odebrat seznam"
+  },
+
+  "icon": {
+    "message": "Ikona"
+  },
+
+  "popup_height": {
+    "message": "Šíøka okna"
+  },
+
+  "new": {
+    "message": "Nový"
+  },
+
+  "reload_lists": {
+    "message": "Reload Lists"
+  },
+
+  "no_lists_found": {
+    "message": "No Lists found"
+  },
+
+  "show_username_in_tweets": {
+    "message": "Show username in tweets"
+  },
+
+  "follow": {
+    "message": "Follow"
+  },
+
+  "unfollow": {
+    "message": "Unfollow"
+  },
+
+  "expand": {
+    "message": "Expand"
+  },
+
+  "contract": {
+    "message": "Contract"
+  },
+
+  "conversation": {
+    "message": "Conversation"
+  },
+
+  "from": {
+    "message": "od"
+  },
+
+  "seconds": {
+    "message": "Sekund"
+  },
+
+  "desktop_alerts": {
+    "message": "Oznámení na ploše"
+  },
+
+  "desktop_alert_timeout": {
+    "message": "Ploše Timeout"
+  },
+
+  "show": {
+    "message": "Ukázat"
+  },
+
+  "hide": {
+    "message": "Hide"
+  },
+
+  "activate": {
+    "message": "Activate"
+  },
+
+  "activated": {
+    "message": "Activated"
+  },
+
+  "disable": {
+    "message": "Disable"
+  },
+
+  "disabled": {
+    "message": "Disabled"
+  },
+
+  "share_this_video": {
+    "message": "Share this Vídeo"
+  },
+
+  "sharing": {
+    "message": "Sharing"
+  },
+
+  "shared": {
+    "message": "Shared"
+  },
+
+  "try_again": {
+    "message": "Try again"
+  },
+
+  "please_login": {
+    "message": "Please, Login"
+  },
+
+  "alert_sound": {
+    "message": "Alert Sound"
+  },
+
+  "undo_retweet": {
+    "message": "Undo Retweet"
+  },
+
+  "you": {
+    "message": "You"
+  },
+
+  "and": {
+    "message": "and"
+  },
+
+  "show_geo_location": {
+    "message": "Show Geo Location"
+  },
+
+  "geotagged_tweets": {
+    "message": "Geotagged tweets"
+  },
+
+  "add_your_location": {
+    "message": "Add your location"
+  },
+
+  "where_are_you": {
+    "message": "Where are you $user$ ?",
+    "placeholders": {
+      "user": {
+        "content": "$1",
+        "example": "Pedro"
+      }
+    }
+  },
+
+  "drag_into_your_location": {
+    "message": "Drag the icon into your location"
+  },
+
+  "bitly_api_login": {
+    "message": "Bit.ly API Login"
+  },
+
+  "bitly_api_key": {
+    "message": "Bit.ly API Key"
+  },
+
+  "need_enable_geotagging_on_twitter": {
+    "message": "Need to enable geotagging on your Twitter settings"
+  },
+
+  "undoing": {
+    "message": "Undoing..."
+  },
+
+  "special_chars": {
+    "message": "Special Characters"
+  }
+}

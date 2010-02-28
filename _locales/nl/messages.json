@@ -1,0 +1,599 @@
+{
+  "author": {
+    "message": "Heimen Stoffels"
+  },
+
+  "_langName": {
+    "message": "Dutch"
+  },
+
+  "langName": {
+    "message": "Nederlands"
+  },
+
+  "description": {
+    "message": "Een twitter client voor Google Chrome"
+  },
+
+  "slogan": {
+    "message": "Hoe staat het ermee?"
+  },
+
+  "home": {
+    "message": "Home"
+  },
+
+  "mentions": {
+    "message": "Vermeldingen"
+  },
+
+  "messages": {
+    "message": "Berichten"
+  },
+
+  "favorites": {
+    "message": "Favorieten"
+  },
+
+  "just_now": {
+    "message": "Zojuist"
+  },
+
+  "less_than_a_minute_ago": {
+    "message": "Minder dan 1 minuut geleden"
+  },
+
+  "a_minute_ago": {
+    "message": "1 minuut geleden"
+  },
+
+  "minutes_ago": {
+    "message": "$n$ minutens geleden",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_hour_ago": {
+    "message": "ongeveer 1 uur geleden"
+  },
+
+  "hours_ago": {
+    "message": "ongeveer $n$ uurs geleden",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_day_ago": {
+    "message": "ongeveer 1 dagen geleden"
+  },
+
+  "days_ago": {
+    "message": "ongeveer $n$ dagens geleden",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "a_month_ago": {
+    "message": "ongeveer 1 maanden geleden"
+  },
+
+  "months_ago": {
+    "message": "ongeveer $n$ maandens geleden",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+
+  "years_ago": {
+    "message": "jaren geleden"
+  },
+
+  "following": {
+    "message": "Volgenden"
+  },
+
+  "followers": {
+    "message": "Volgelingen"
+  },
+
+  "username": {
+    "message": "Gebruikersnaam"
+  },
+
+  "password": {
+    "message": "Wachtwoord"
+  },
+
+  "remember": {
+    "message": "Onthoudt"
+  },
+
+  "login": {
+    "message": "Inloggen"
+  },
+
+  "logout": {
+    "message": "Uitloggen"
+  },
+
+  "retweet": {
+    "message": "Retweet"
+  },
+
+  "retweeted_by": {
+    "message": "Geretweet door"
+  },
+
+  "retweet_now": {
+    "message": "Retweet nu"
+  },
+
+  "edit": {
+    "message": "Bewerken"
+  },
+
+  "reply": {
+    "message": "Antwoorden"
+  },
+
+  "in_reply_to": {
+    "message": "in antwoord op"
+  },
+
+  "update": {
+    "message": "Update"
+  },
+
+  "delete": {
+    "message": "Verwijderen"
+  },
+
+  "cancel": {
+    "message": "Annuleren"
+  },
+
+  "ok": {
+    "message": "OK"
+  },
+
+  "done": {
+    "message": "Klaar"
+  },
+
+  "favorite": {
+    "message": "Favoriet"
+  },
+
+  "unfavorite": {
+    "message": "Ontfavoriet"
+  },
+
+  "show_more": {
+    "message": "Laat meer zien"
+  },
+
+  "no_more_tweets": {
+    "message": "Geen tweets meer gevonden"
+  },
+
+  "new_tweet": {
+    "message": "Nieuwe tweet"
+  },
+
+  "new_tweets": {
+    "message": "Nieuwe tweets"
+  },
+
+  "logging_in": {
+    "message": "Bezig met inloggen"
+  },
+
+  "sucessfully_logged": {
+    "message": "Met succes in/uitgelogd"
+  },
+
+  "tweets": {
+    "message": "Tweets"
+  },
+
+  "last_update": {
+    "message": "Laatste update"
+  },
+
+  "member_since": {
+    "message": "Lid sinds"
+  },
+
+  "watch_on_youtube": {
+    "message": "Bekijk op Youtube"
+  },
+
+  "configuration": {
+    "message": "Instellingen"
+  },
+
+  "minute": {
+    "message": "Minuut"
+  },
+
+  "minutes": {
+    "message": "Minuten"
+  },
+
+  "tweets_per_page": {
+    "message": "Tweets per page"
+  },
+
+  "refresh_time": {
+    "message": "Ververstijd"
+  },
+
+  "language": {
+    "message": "Taal"
+  },
+
+  "remaining_api_requests": {
+    "message": "Resterende API-verzoeken"
+  },
+
+  "resets_on": {
+    "message": "Wordt hersteld op"
+  },
+
+  "restart_required": {
+    "message": "Herstart benodigd"
+  },
+
+  "main": {
+    "message": "Algemeen"
+  },
+
+  "other": {
+    "message": "Overig"
+  },
+
+  "save": {
+    "message": "Opslaan"
+  },
+
+  "reset": {
+    "message": "Herstel"
+  },
+
+  "twitter_limits_api": {
+    "message": "Twitter heeft een limiet van 150 API-verzoeken per uur"
+  },
+
+  "how_to_restart": {
+    "message": "Om te herstarten, ga naar de Extensies-pagina en schakel Chrowety in en uit"
+  },
+
+  "sending": {
+    "message": "Bezig met verzenden"
+  },
+
+  "shorting_url": {
+    "message": "Verkorten van URL"
+  },
+
+  "password_empty": {
+    "message": "Wachtwoord is leeg"
+  },
+
+  "user_empty": {
+    "message": "Gebruikersnaam is leeg"
+  },
+
+  "wait": {
+    "message": "Wacht"
+  },
+
+  "retweeting": {
+    "message": "Aan het Retweeten"
+  },
+
+  "loading": {
+    "message": "Bezig met laden"
+  },
+
+  "api_excedeed": {
+    "message": "API-limiet overschreden"
+  },
+
+  "requests_per_hour": {
+    "message": "API-verzoeken per uur"
+  },
+
+  "url_shortener": {
+    "message": "URL-verkorter"
+  },
+
+  "yes": {
+    "message": "Ja"
+  },
+
+  "no": {
+    "message": "Nee"
+  },
+
+  "login_failed": {
+    "message": "Inloggen mislukt"
+  },
+
+  "interface": {
+    "message": "Uiterlijk"
+  },
+
+  "reset2": {
+    "message": "Herstel"
+  },
+
+  "share_this_page": {
+    "message": "Deel deze pagina"
+  },
+
+  "following_you": {
+    "message": "Volgen jou"
+  },
+
+  "followed": {
+    "message": "Followed"
+  },
+
+  "alerts": {
+    "message": "Meldingen"
+  },
+
+  "max_tweets_per_alerts": {
+    "message": "Tweets per melding"
+  },
+
+  "to": {
+    "message": "Aan"
+  },
+
+  "forbidden": {
+    "message": "Verboden"
+  },
+
+  "error": {
+    "message": "Fout"
+  },
+
+  "twitter_question": {
+    "message": "Twitter-vraag"
+  },
+
+  "text_shadow": {
+    "message": "Tekstschaduw"
+  },
+
+  "tweet_font_size": {
+    "message": "Tweet lettergrootte"
+  },
+
+  "open_links_in_background": {
+    "message": "Open links op de achtergrond"
+  },
+
+  "or": {
+    "message": "Of"
+  },
+
+  "sign_in_with_twitter": {
+    "message": "Meld u aan bij Twitter"
+  },
+
+  "request_new_auth": {
+    "message": "Vraag een nieuwe machtigingsprocedure"
+  },
+
+  "translate_this_tweet": {
+    "message": "Vertaal deze Tweet"
+  },
+
+  "translate_tweets_to": {
+    "message": "Tweets vertalen naar"
+  },
+
+  "base_api": {
+    "message": "Basis API"
+  },
+
+  "base_api_effect": {
+    "message": "Basis API alleen van kracht als u de API Inloggen modus gebruikt"
+  },
+
+  "lists": {
+    "message": "Lijst"
+  },
+
+  "add_list": {
+    "message": "Lijst toevoegen"
+  },
+
+  "remove_list": {
+    "message": "Verwijder lijst"
+  },
+
+  "icon": {
+    "message": "Icoontje"
+  },
+
+  "popup_height": {
+    "message": "Popup-hoogte"
+  },
+
+  "new": {
+    "message": "Niew"
+  },
+
+  "reload_lists": {
+    "message": "Reload Lists"
+  },
+
+  "no_lists_found": {
+    "message": "No Lists found"
+  },
+
+  "show_username_in_tweets": {
+    "message": "Show username in tweets"
+  },
+
+  "follow": {
+    "message": "Follow"
+  },
+
+  "unfollow": {
+    "message": "Unfollow"
+  },
+
+  "expand": {
+    "message": "Expand"
+  },
+
+  "contract": {
+    "message": "Contract"
+  },
+
+  "conversation": {
+    "message": "Conversation"
+  },
+
+  "from": {
+    "message": "via"
+  },
+
+  "seconds": {
+    "message": "Seconds"
+  },
+
+  "desktop_alerts": {
+    "message": "Desktop Alerts"
+  },
+
+  "desktop_alert_timeout": {
+    "message": "Desktop Alert Timeout"
+  },
+
+  "show": {
+    "message": "Show"
+  },
+
+  "hide": {
+    "message": "Hide"
+  },
+
+  "activate": {
+    "message": "Activate"
+  },
+
+  "activated": {
+    "message": "Activated"
+  },
+
+  "disable": {
+    "message": "Disable"
+  },
+
+  "disabled": {
+    "message": "Disabled"
+  },
+
+  "share_this_video": {
+    "message": "Share this Vídeo"
+  },
+
+  "sharing": {
+    "message": "Sharing"
+  },
+
+  "shared": {
+    "message": "Shared"
+  },
+
+  "try_again": {
+    "message": "Try again"
+  },
+
+  "please_login": {
+    "message": "Please, Login"
+  },
+
+  "alert_sound": {
+    "message": "Alert Sound"
+  },
+
+  "undo_retweet": {
+    "message": "Undo Retweet"
+  },
+
+  "you": {
+    "message": "You"
+  },
+
+  "and": {
+    "message": "and"
+  },
+
+  "show_geo_location": {
+    "message": "Show Geo Location"
+  },
+
+  "geotagged_tweets": {
+    "message": "Geotagged tweets"
+  },
+
+  "add_your_location": {
+    "message": "Add your location"
+  },
+
+  "where_are_you": {
+    "message": "Where are you $user$ ?",
+    "placeholders": {
+      "user": {
+        "content": "$1",
+        "example": "Pedro"
+      }
+    }
+  },
+
+  "drag_into_your_location": {
+    "message": "Drag the icon into your location"
+  },
+
+  "bitly_api_login": {
+    "message": "Bit.ly API Login"
+  },
+
+  "bitly_api_key": {
+    "message": "Bit.ly API Key"
+  },
+
+  "need_enable_geotagging_on_twitter": {
+    "message": "Need to enable geotagging on your Twitter settings"
+  },
+
+  "undoing": {
+    "message": "Undoing..."
+  },
+
+  "special_chars": {
+    "message": "Special Characters"
+  }
+}
