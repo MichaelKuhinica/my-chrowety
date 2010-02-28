@@ -1,0 +1,34 @@
+<html>
+<head>
+<link href="css/desktop_alert.css" type="text/css" rel="stylesheet" />
+<script>
+var TIME,
+    Timeout,
+    data,
+    hash = location.hash;
+
+function load(){
+    TIME = setTimeout(function(){
+        window.close();
+    }, Timeout);
+}
+</script>
+</head>
+<body onload="load()" onmouseout="load()" onmouseover="clearTimeout(TIME)">
+<script>
+if(hash){
+    var h = hash.split('#');
+    if(h[1]){
+        data = unescape(h[1]);
+        document.write(data);
+    }
+    else{
+        window.close();
+    }
+}
+else{
+    window.close();
+}
+</script>
+</body>
+</html>

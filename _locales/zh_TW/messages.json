@@ -1,0 +1,471 @@
+{
+   "_langName": {
+      "message": "Traditional Chinese"
+   },
+   "a_day_ago": {
+      "message": "1天前"
+   },
+   "a_hour_ago": {
+      "message": "1小時前"
+   },
+   "a_minute_ago": {
+      "message": "1分鐘前"
+   },
+   "a_month_ago": {
+      "message": "1個月前"
+   },
+   "activate": {
+      "message": "打開"
+   },
+   "activated": {
+      "message": "已打開"
+   },
+   "add_list": {
+      "message": "加入列表"
+   },
+   "alert_sound": {
+      "message": "提示音"
+   },
+   "alerts": {
+      "message": "提示"
+   },
+   "api_excedeed": {
+      "message": "已經超過API用量"
+   },
+   "author": {
+      "message": "LazyFai"
+   },
+   "base_api": {
+      "message": "API路徑"
+   },
+   "base_api_effect": {
+      "message": "API路徑只會在API登入模式生效"
+   },
+   "cancel": {
+      "message": "取消"
+   },
+   "configuration": {
+      "message": "設定"
+   },
+   "contract": {
+      "message": "聯絡人"
+   },
+   "conversation": {
+      "message": "對話"
+   },
+   "days_ago": {
+      "message": "$n$ 日之前",
+      "placeholders": {
+         "n": {
+            "content": "$1",
+            "example": "2"
+         }
+      }
+   },
+   "delete": {
+      "message": "刪除"
+   },
+   "description": {
+      "message": "一個 Google 瀏覽器的 Twitter 用戶端"
+   },
+   "desktop_alert_timeout": {
+      "message": "桌面提示時間長短"
+   },
+   "desktop_alerts": {
+      "message": "桌面提示"
+   },
+   "disable": {
+      "message": "關閉"
+   },
+   "disabled": {
+      "message": "已關閉"
+   },
+   "done": {
+      "message": "完成"
+   },
+   "edit": {
+      "message": "修改"
+   },
+   "error": {
+      "message": "錯誤"
+   },
+   "expand": {
+      "message": "展開"
+   },
+   "favorite": {
+      "message": "喜歡"
+   },
+   "favorites": {
+      "message": "我的最愛"
+   },
+   "follow": {
+      "message": "跟隨"
+   },
+   "followed": {
+      "message": "已跟隨"
+   },
+   "followers": {
+      "message": "跟隨者"
+   },
+   "following": {
+      "message": "正在跟隨"
+   },
+   "following_you": {
+      "message": "正在跟隨你"
+   },
+   "forbidden": {
+      "message": "被拒絕"
+   },
+   "from": {
+      "message": "由"
+   },
+   "hide": {
+      "message": "隱敝"
+   },
+   "home": {
+      "message": "回主頁"
+   },
+   "hours_ago": {
+      "message": "$n$ 小時之前",
+      "placeholders": {
+         "n": {
+            "content": "$1",
+            "example": "2"
+         }
+      }
+   },
+   "how_to_restart": {
+      "message": "想重新啟動的話，到插件頁，關閉再開啟 Chrowety 即可"
+   },
+   "icon": {
+      "message": "圖示"
+   },
+   "in_reply_to": {
+      "message": "回答 "
+   },
+   "interface": {
+      "message": "界面"
+   },
+   "just_now": {
+      "message": "剛剛之前"
+   },
+   "langName": {
+      "message": "繁體中文"
+   },
+   "language": {
+      "message": "語言"
+   },
+   "last_update": {
+      "message": "最近更新"
+   },
+   "less_than_a_minute_ago": {
+      "message": "少於1分鐘前"
+   },
+   "lists": {
+      "message": "列表"
+   },
+   "loading": {
+      "message": "載入中"
+   },
+   "logging_in": {
+      "message": "登入中"
+   },
+   "login": {
+      "message": "登入"
+   },
+   "login_failed": {
+      "message": "登入失敗"
+   },
+   "logout": {
+      "message": "登出"
+   },
+   "main": {
+      "message": "主要"
+   },
+   "max_tweets_per_alerts": {
+      "message": "每個提示窗訊息數"
+   },
+   "member_since": {
+      "message": "加入 Twitter 從"
+   },
+   "mentions": {
+      "message": "提到"
+   },
+   "messages": {
+      "message": "訊息"
+   },
+   "minute": {
+      "message": "分鐘"
+   },
+   "minutes": {
+      "message": "分鐘"
+   },
+   "minutes_ago": {
+      "message": "$n$ 分鐘之前",
+      "placeholders": {
+         "n": {
+            "content": "$1",
+            "example": "2"
+         }
+      }
+   },
+   "months_ago": {
+      "message": "$n$ 個月之前",
+      "placeholders": {
+         "n": {
+            "content": "$1",
+            "example": "2"
+         }
+      }
+   },
+   "new": {
+      "message": "新的"
+   },
+   "new_tweet": {
+      "message": "新的訊息"
+   },
+   "new_tweets": {
+      "message": "新的訊息"
+   },
+   "no": {
+      "message": "沒有"
+   },
+   "no_lists_found": {
+      "message": "沒有列表"
+   },
+   "no_more_tweets": {
+      "message": "沒有其他tweets"
+   },
+   "ok": {
+      "message": "好"
+   },
+   "open_links_in_background": {
+      "message": "在背景打開連結"
+   },
+   "or": {
+      "message": "或者"
+   },
+   "other": {
+      "message": "其他"
+   },
+   "password": {
+      "message": "密碼"
+   },
+   "password_empty": {
+      "message": "密碼為空白"
+   },
+   "please_login": {
+      "message": "請登入"
+   },
+   "popup_height": {
+      "message": "彈出視窗高度"
+   },
+   "refresh_time": {
+      "message": "更新密度"
+   },
+   "reload_lists": {
+      "message": "重新載入"
+   },
+   "remaining_api_requests": {
+      "message": "剩下的API請求數"
+   },
+   "remember": {
+      "message": "記著"
+   },
+   "remove_list": {
+      "message": "移除列表"
+   },
+   "reply": {
+      "message": "回答"
+   },
+   "request_new_auth": {
+      "message": "要求一個新的授權"
+   },
+   "requests_per_hour": {
+      "message": "每小時API請求數"
+   },
+   "reset": {
+      "message": "重置"
+   },
+   "reset2": {
+      "message": "重置"
+   },
+   "resets_on": {
+      "message": "重置於"
+   },
+   "restart_required": {
+      "message": "需要重新啟動"
+   },
+   "retweet": {
+      "message": "Retweet"
+   },
+   "retweet_now": {
+      "message": "現在Retweet"
+   },
+   "retweeted_by": {
+      "message": "Retweet自"
+   },
+   "retweeting": {
+      "message": "Retweet中"
+   },
+   "save": {
+      "message": "儲存"
+   },
+   "seconds": {
+      "message": "秒"
+   },
+   "sending": {
+      "message": "傳送中"
+   },
+   "share_this_page": {
+      "message": "分享這個網頁"
+   },
+   "share_this_video": {
+      "message": "分享這個視像"
+   },
+   "shared": {
+      "message": "已分享"
+   },
+   "sharing": {
+      "message": "分享中"
+   },
+   "shorting_url": {
+      "message": "縮短網址"
+   },
+   "show": {
+      "message": "顯示"
+   },
+   "show_more": {
+      "message": "顯示更多"
+   },
+   "show_username_in_tweets": {
+      "message": "在訊息中顯示用戶名"
+   },
+   "sign_in_with_twitter": {
+      "message": "登入到Twitter"
+   },
+   "slogan": {
+      "message": "發生什麼事?"
+   },
+   "sucessfully_logged": {
+      "message": "登入成功"
+   },
+   "text_shadow": {
+      "message": "文字陰影"
+   },
+   "to": {
+      "message": "給"
+   },
+   "translate_this_tweet": {
+      "message": "翻譯這條訊息"
+   },
+   "translate_tweets_to": {
+      "message": "翻譯這些訊息到"
+   },
+   "try_again": {
+      "message": "重試"
+   },
+   "tweet_font_size": {
+      "message": "訊息字體大小"
+   },
+   "tweets": {
+      "message": "訊息"
+   },
+   "tweets_per_page": {
+      "message": "每頁訊息數"
+   },
+   "twitter_limits_api": {
+      "message": "Twitter 限定每小時只能提出150次API請求"
+   },
+   "twitter_question": {
+      "message": "Twitter 訊息"
+   },
+   "unfavorite": {
+      "message": "不喜歡"
+   },
+   "unfollow": {
+      "message": "不跟隨"
+   },
+   "update": {
+      "message": "更新"
+   },
+   "url_shortener": {
+      "message": "網址縮短服務"
+   },
+   "user_empty": {
+      "message": "用戶名是空白"
+   },
+   "username": {
+      "message": "用戶名"
+   },
+   "wait": {
+      "message": "等候"
+   },
+   "watch_on_youtube": {
+      "message": "到Youtube上看"
+   },
+   "years_ago": {
+      "message": "年前"
+   },
+   "yes": {
+      "message": "是"
+   },
+
+  "undo_retweet": {
+    "message": "Undo Retweet"
+  },
+
+  "you": {
+    "message": "You"
+  },
+
+  "and": {
+    "message": "and"
+  },
+
+  "show_geo_location": {
+    "message": "Show Geo Location"
+  },
+
+  "geotagged_tweets": {
+    "message": "Geotagged tweets"
+  },
+
+  "add_your_location": {
+    "message": "Add your location"
+  },
+
+  "where_are_you": {
+    "message": "Where are you $user$ ?",
+    "placeholders": {
+      "user": {
+        "content": "$1",
+        "example": "Pedro"
+      }
+    }
+  },
+
+  "drag_into_your_location": {
+    "message": "Drag the icon into your location"
+  },
+
+  "bitly_api_login": {
+    "message": "Bit.ly API Login"
+  },
+
+  "bitly_api_key": {
+    "message": "Bit.ly API Key"
+  },
+
+  "need_enable_geotagging_on_twitter": {
+    "message": "Need to enable geotagging on your Twitter settings"
+  },
+
+  "undoing": {
+    "message": "Undoing..."
+  },
+
+  "special_chars": {
+    "message": "Special Characters"
+  }
+}

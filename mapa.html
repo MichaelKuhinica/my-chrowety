@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Chrowety Geo Location</title>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<style type="text/css">body{margin:0;padding:0;font-family:Tahoma,Arial;font-size:10pt}</style>
+<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+<script type="text/javascript">
+    var GeoMap = parent.GeoMap;
+    var map,geocoder;
+    var Tweet =
+    '<div style="font-family:Tahoma,Arial;font-size:8pt;clear:both;">'+
+        '<span style="height:32px;line-height:32px;vertical-align:middle">'+
+            '<img style="float:left;margin-right:5px;border-radius:4px" width="32" height="32" src="{foto}">'+
+            '{nome}'+
+        '</span>'+
+        '<br /><br /><span style="max-width:185px;">{texto}</span>'+
+    '</div>';
+
+function Location(){
+    geocoder = new google.maps.Geocoder();
+    if(geocoder){
+      geocoder.geocode({'address': GeoMap.location}, function(results, status) {
+        if(status == google.maps.GeocoderStatus.OK){
+           //Tweet = Tweet.replace('{texto2}', GeoMap.texto);
+           Tweet = Tweet.replace('{texto}', results[0].formatted_address);
+           Tweet = Tweet.replace('{foto}', GeoMap.foto);
+           Tweet = Tweet.replace('{nome}', GeoMap.nome);
+           ShowMap();
+        }else{
+          console.log("Geocode Error: " + status);
+        }
+      });
+    }
+}
+
+function ShowMap() {
+    if(!GeoMap){
+      return;
+    }
+    cc = GeoMap.location.split(',');
+    var Coo = new google.maps.LatLng(cc[0], cc[1]);
+    var Op = {
+        zoom: 15,
+        center: Coo,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        mapTypeControl: false
+    };
+    map = new google.maps.Map(document.getElementById("mapa"), Op);
+    var info = new google.maps.InfoWindow({
+        position: Coo,
+        content: Tweet
+    });
+    var Icone = new google.maps.Marker({
+        position: Coo,
+        map: map,
+        title: GeoMap.texto,
+        icon: chrome.extension.getURL('icones/x19.png')
+    });
+    info.open(map, Icone);
+    google.maps.event.addListener(Icone, 'click', function() {
+        info.open(map, Icone);
+    });
+}
+</script>
+</head>
+<body onload="Location()">
+  <div id="mapa" style="width:300px; height:350px">
+    <span>
+      <img style="float:left;margin-right:5px;" src="img/load.gif" />
+      <script>document.write(GeoMap.loading)</script>
+    </span>
+  </div>
+</body>
+</html>

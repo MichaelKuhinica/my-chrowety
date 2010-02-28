@@ -1,0 +1,33 @@
+*{
+    margin:0;
+    padding:0;
+    font-family:Tahoma, Arial;
+}
+a{
+    color: #3333FF;
+    text-decoration:none;
+}
+.tweet{
+    margin:5px;
+}
+.foto{
+    border-radius:5px;
+    -webkit-box-shadow: 0px 0px 5px #888;
+    border:none;
+    margin-right:5px;
+    margin-bottom:5px;
+}
+.nome{
+    color: #004993;
+    font-size: 9pt;
+}
+.texto{
+    font-size: 8pt;
+}
+.data{
+    font-size: 8pt;
+    color:#333333;
+}
+.fl{float:left}
+.fr{float:right}
+br,.cb{clear:both}

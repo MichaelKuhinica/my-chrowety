@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Chrowety Geo Location</title>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<link type="text/css" rel="stylesheet" href="css/base.css" />
+<style type="text/css">body{margin:0;text-align:center;padding:0;font-family:Tahoma,Arial;font-size:10pt}</style>
+<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+<script type="text/javascript">
+var Controller = function(){if(chrome.extension.getBackgroundPage()){return chrome.extension.getBackgroundPage();}else{var v=chrome.extension.getViews(),p;for(var i in v){if(v[i]&&v[i].fec){p=v[i]}}return p;}};
+var db = Controller().db;
+function Traduz(s,e){return Controller().Traduz(s, e)}
+function html(r){return document.write(r)}
+
+var map,geocoder,Icone,info;
+var Location = null;
+
+function Salva(){
+    window.opener.SalvaLocation();
+}
+
+function Ponto(op){
+    var pos = Icone.getPosition();
+    if(op) info.open(map, Icone);
+    Position(pos);
+}
+
+geocoder = new google.maps.Geocoder();
+function Position(pos){
+  geocoder.geocode({
+    latLng: pos
+  },function(responses) {
+    if(responses && responses.length > 0) {
+      document.getElementById('endereco').innerText = (responses[0].formatted_address);
+    }else{
+      console.log('Cannot determine address at this location.');
+    }
+  });
+}
+function ShowMap() {
+    var _ll;
+    if(Controller().config.Geo.Location && Controller().config.Geo.Location[0]){
+        _ll = Controller().config.Geo.Location;
+    }else{
+        _ll = [-26.489323960057277, -44.56107812499999];
+    }
+    var Coo = new google.maps.LatLng(_ll[0], _ll[1]);
+    var Op = {
+        zoom: 2,
+        center: Coo,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        mapTypeControl: false
+    };
+    map = new google.maps.Map(document.getElementById("mapa"), Op);
+    var html =
+    '<div style="text-align:left;font-family:Tahoma,Arial;font-size:8pt;clear:both">'+
+        '<span style="height:32px;line-height:32px;vertical-align:middle">'+
+            '<img style="float:left;margin-right:5px;border-radius:4px" width="32" height="32" src="{foto}">'+
+            '{texto}'+
+        '</span>'+
+        ''+
+    '</div>';
+    html = html.replace('{foto}', db.pega('foto'));
+    html = html.replace('{texto}', Traduz('where_are_you', db.pega('nome').split(' ')[0]));
+    info = new google.maps.InfoWindow({
+        position: Coo,
+        content: html
+    });
+    Icone = new google.maps.Marker({
+        position: Coo,
+        size: new google.maps.Size(37, 32),
+        map: map,
+        title: Traduz('where_are_you', db.pega('nome').split(' ')[0]),
+        draggable: true,
+        cursor: 'move',
+        icon: chrome.extension.getURL('icones/x19.png')
+    });
+    google.maps.event.addListener(Icone, 'dragstart', function(){info.close()});
+    google.maps.event.addListener(Icone, 'drag', function(){Ponto()});
+    google.maps.event.addListener(Icone, 'dragend', function(){Ponto(true)});
+    Ponto(true);
+}
+</script>
+</head>
+<body onload="ShowMap()">
+  <div id="mapa" style="width:400px; height:300px">
+    <span>
+      <img style="float:left;margin-right:5px;" src="img/load.gif" />
+      <script>html(Traduz('loading'))</script>
+    </span>
+  </div>
+  <br />
+  <span id="endereco"></span>
+  <br /><br />
+  <button onclick="Salva()" class="buttonn"><script>html(Traduz('done'))</script></button>
+</body>
+</html>
