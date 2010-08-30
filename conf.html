@@ -6,7 +6,7 @@
 <link type="text/css" rel="stylesheet" href="css/config.css" />
 <link rel="icon" type="image/png" href="icones/x16.png">
 <script type="text/javascript" src="js/db.js"></script>
-<script type="text/javascript" src="js/jquery-1.4.min.js"></script>
+<script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
 <script type="text/javascript">
 /*<![CDATA[*/
 var config = {},config_temp = {},DesktopNotifications;
@@ -269,6 +269,7 @@ function LoadConfig(){
     SelectOption('tweet_font_size', config.tweet_font_size);
 	SelectOption('popup_height', config.popup_height);
     SelectOption('tweet_shadow', config.tweet_shadow);
+    SelectOption('media_preview', config.media_preview);
     SelectOption('link_in_bg', config.link_in_bg);
 	SelectOption('show_username', config.show_username);
     SelectOption('home_tweets_page', config.start_count.home);
@@ -311,6 +312,7 @@ function SaveConfig(geo){
     config.refresh.mentions     = GetValue('mentions_refresh_time');
     config.start_count.messages = GetValue('messages_tweets_page');
     config.refresh.messages     = GetValue('messages_refresh_time');
+    config.media_preview        = GetValue('media_preview');
 
     if(geo){
         config.Geo = config_temp.Geo;
@@ -600,6 +602,14 @@ $(document).ready(init);
               <select id="tweet_shadow">
                 <option value="1px 1px 1px #ccc"><script>html(Traduz('yes'))</script></option>
                 <option value="false"><script>html(Traduz('no'))</script></option>
+              </select>
+            </label>
+            
+            <br /><br />
+            <label>Preview de Media
+              <select id="media_preview">
+                <option value="1"><script>html(Traduz('yes'))</script></option>
+                <option value="0"><script>html(Traduz('no'))</script></option>
               </select>
             </label>
 <!--

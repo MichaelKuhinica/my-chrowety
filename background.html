@@ -2615,6 +2615,7 @@ var Utils = {
     },
 
     Regex:{
+    /*
         Replace: function(txt){
             if(!txt){
                 return txt;
@@ -2637,6 +2638,33 @@ var Utils = {
                 txt = txt.replace(RGX.hash,' $2<a class="tag" title="$3" nohref="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
                 return txt;
             }
+        }
+      */  
+        Replace: function(txt){
+            if(!txt){
+                return txt;
+            }else {
+                var hrf = 'nohref';
+                var clk = true;
+                
+                if(config.media_preview == 1) {
+                  txt = txt.replace(RGX.twitpic,' <a class="url" nohref="$1" title="$1" onclick="Twitpic(\'$3\');">$1</a>');
+                  txt = txt.replace(RGX.twigoo,' <a class="url" nohref="$1" title="$1" onclick="Twitgoo(\'$3\');">$1</a>');
+                  txt = txt.replace(RGX.yfrog,' <a class="url" nohref="$1" title="$1" onclick="Yfrog(\'$4\');">$1</a>');
+                  txt = txt.replace(RGX.picgd,' <a class="url" nohref="$1" title="$1" onclick="Tweetphoto(\'$1\');">$1</a>');
+                  txt = txt.replace(RGX.youtube,' <a class="url" nohref="$1" title="$4" onclick="Youtube(\'$4\');">$1</a>');
+                  txt = txt.replace(RGX.twitcam,' <a class="url" nohref="$1" title="$4" onclick="Twitcam(\'$4\');">$1</a>');
+                  txt = txt.replace(RGX.twitvid,' <a class="url" nohref="$1" title="$4" onclick="Twitvid(\'$4\');">$1</a>');
+                  txt = txt.replace(RGX.vimeo,' <a class="url" nohref="$1" title="$4" onclick="Vimeo(\'$4\');">$1</a>');
+                  txt = txt.replace(RGX.youtu,' <a class="url" nohref="$1" title="$4" onclick="Youtube(\'$4\');">$1</a>');
+                } 
+                txt = txt.replace(RGX.link,' <a class="url" title="$2" href="#" nohref="$2" onclick="Link(this, event);">$2</a> ');                       
+                txt = txt.replace(RGX.nohttp,' <a class="url" title="$2" href="#" nohref="http://$2" onclick="Link(this, event);">$2</a> ');
+                txt = txt.replace(RGX.user,' $1<a class="usuario" title="$2" nohref="http://twitter.com/$2" onclick="ShowUser(\'$2\')">$2</a>');
+                txt = txt.replace(RGX.link2,' <a class="url" title="$2" href="#" nohref="$2" onclick="Link(this, event);">$2</a> ');
+                txt = txt.replace(RGX.hash,' $2<a class="tag" title="$3" nohref="http://twitter.com/search?q=%23$3" onclick="Link(this, event);">$3</a>');
+                return txt;
+            } 
         }
     },
 
